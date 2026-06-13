@@ -44,7 +44,6 @@ export default function CouponsPage() {
   const [loading, setLoading] = useState(true);
 
   const [editing, setEditing] = useState(null);
-  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -85,7 +84,6 @@ export default function CouponsPage() {
       discountValue: 10,
       active: true,
     });
-    setOpen(true);
   };
 
   const save = async () => {
@@ -124,7 +122,6 @@ export default function CouponsPage() {
       setCoupons((prev) =>
         isNew ? [...prev, saved] : prev.map((c) => (c.id === saved.id ? saved : c))
       );
-      setOpen(false);
       toast.success("Saved successfully");
     } catch (err) {
       toast.error(err.message || "Failed to save coupon/promotion");
@@ -183,12 +180,171 @@ export default function CouponsPage() {
 
   return (
     <AdminShell title="Coupon & Promotion">
-      <Button 
-        onClick={startNew} 
-        className="mb-4 bg-[#6F4E37] hover:bg-[#6F4E37]/90 text-white font-bold rounded-xl cursor-pointer"
-      >
-        <Plus className="w-4 h-4 mr-1" /> New Coupon
-      </Button>
+      {editing ? (
+        <Card className="bg-transparent border-0 shadow-none mb-6">
+          <div className="flex items-center gap-2 mb-6">
+            <Button onClick={() => setEditing(null)} variant="outline" className="bg-transparent border-[#6F4E37]/30 text-[#6F4E37] hover:bg-[#FAF3E0] rounded-xl cursor-pointer">Discard</Button>
+            <Button onClick={save} className="bg-[#6F4E37] text-white hover:bg-[#6F4E37]/90 font-bold px-6 rounded-xl cursor-pointer">Save</Button>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-x-16 gap-y-10 max-w-4xl px-2">
+            {/* Left Column */}
+            <div className="space-y-10">
+              <div className="flex items-end justify-between">
+                <Label className="text-[#6F4E37] font-bold text-sm w-1/3 pb-2">Promoton Name</Label>
+                <Input 
+                  placeholder="e.g. Masla Tea" 
+                  value={editing.name} 
+                  onChange={(e) => setEditing({...editing, name: e.target.value})}
+                  className="w-2/3 border-0 border-b border-[#6F4E37]/40 rounded-none bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:border-[#6F4E37] text-[#2B2118]"
+                />
+              </div>
+
+              <div className="flex items-end justify-between">
+                <Label className="text-[#6F4E37] font-bold text-sm w-1/3 pb-2">Type</Label>
+                <Select value={editing.type} onValueChange={(v) => setEditing({...editing, type: v})}>
+                  <SelectTrigger className="w-2/3 border-0 border-b border-[#6F4E37]/40 rounded-none bg-transparent shadow-none px-0 focus:ring-0 focus:border-[#6F4E37] text-[#2B2118]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
+                    <SelectItem value="Coupon">Coupon</SelectItem>
+                    <SelectItem value="Promotion">Promotion</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-end justify-between">
+                <Label className="text-[#6F4E37] font-bold text-sm w-1/3 pb-2">Product Description</Label>
+                <Input 
+                  placeholder="e.g Burger with chees" 
+                  className="w-2/3 border-0 border-b border-[#6F4E37]/40 rounded-none bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:border-[#6F4E37] text-[#2B2118]"
+                />
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div className="space-y-10">
+              {editing.type === "Coupon" ? (
+                <>
+                  <div className="flex items-end justify-between">
+                    <Label className="text-[#6F4E37] font-bold text-sm w-1/3 pb-2">Coupon Code</Label>
+                    <Input 
+                      placeholder="Summer20" 
+                      value={editing.code || ""} 
+                      onChange={(e) => setEditing({...editing, code: e.target.value})}
+                      className="w-2/3 border-0 border-b border-[#6F4E37]/40 rounded-none bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:border-[#6F4E37] font-mono uppercase text-[#2B2118]"
+                    />
+                  </div>
+
+                  <div className="flex items-end justify-between">
+                    <div className="w-1/3 pb-2">
+                      <Label className="text-[#6F4E37] font-bold text-sm block">Redeem</Label>
+                      <Label className="text-[#6F4E37] font-bold text-sm block">Discount</Label>
+                    </div>
+                    <div className="w-2/3 flex items-center gap-4">
+                      <Input 
+                        type="number"
+                        value={editing.discountValue}
+                        onChange={(e) => setEditing({...editing, discountValue: e.target.value})}
+                        className="flex-1 border-0 border-b border-[#6F4E37]/40 rounded-none bg-transparent shadow-none px-0 text-center focus-visible:ring-0 focus-visible:border-[#6F4E37] text-[#2B2118]"
+                      />
+                      <Select value={editing.discountKind} onValueChange={(v) => setEditing({...editing, discountKind: v})}>
+                        <SelectTrigger className="w-20 border border-[#6F4E37] rounded bg-transparent shadow-none px-2 focus:ring-0 focus:border-[#6F4E37] text-[#2B2118]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
+                          <SelectItem value="percent">% V</SelectItem>
+                          <SelectItem value="amount">₹ V</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-end justify-between">
+                    <Label className="text-[#6F4E37] font-bold text-sm w-1/3 pb-2">Apply:</Label>
+                    <div className="w-2/3 flex flex-col gap-2">
+                      <Select value={editing.apply} onValueChange={(v) => setEditing({...editing, apply: v})}>
+                        <SelectTrigger className="w-full border-0 border-b border-[#6F4E37]/40 rounded-none bg-transparent shadow-none px-0 focus:ring-0 focus:border-[#6F4E37] text-[#2B2118]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
+                          <SelectItem value="Product">Product</SelectItem>
+                          <SelectItem value="Order">Order</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {editing.apply === "Product" && (
+                        <Select value={editing.productId || ""} onValueChange={(v) => setEditing({...editing, productId: v})}>
+                          <SelectTrigger className="w-full border border-[#6F4E37] rounded bg-transparent shadow-none px-2 focus:ring-0 focus:border-[#6F4E37] text-[#2B2118] h-8 text-xs">
+                            <SelectValue placeholder="Select Product" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118] max-h-40">
+                            {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                  </div>
+
+                  {editing.apply === "Product" ? (
+                    <div className="flex items-end justify-between">
+                      <Label className="text-[#6F4E37] font-bold text-sm w-1/3 pb-2">Min Qty</Label>
+                      <Input 
+                        type="number"
+                        value={editing.minQty ?? 1}
+                        onChange={(e) => setEditing({...editing, minQty: e.target.value})}
+                        className="w-2/3 border-0 border-b border-[#6F4E37]/40 rounded-none bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:border-[#6F4E37] text-[#2B2118]"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-end justify-between">
+                      <Label className="text-[#6F4E37] font-bold text-sm w-1/3 pb-2">Min Order (₹)</Label>
+                      <Input 
+                        type="number"
+                        value={editing.minOrderAmount ?? 0}
+                        onChange={(e) => setEditing({...editing, minOrderAmount: e.target.value})}
+                        className="w-2/3 border-0 border-b border-[#6F4E37]/40 rounded-none bg-transparent shadow-none px-0 focus-visible:ring-0 focus-visible:border-[#6F4E37] text-[#2B2118]"
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-end justify-between">
+                    <div className="w-1/3 pb-2">
+                      <Label className="text-[#6F4E37] font-bold text-sm block">Redeem</Label>
+                      <Label className="text-[#6F4E37] font-bold text-sm block">Discount</Label>
+                    </div>
+                    <div className="w-2/3 flex items-center gap-4">
+                      <Input 
+                        type="number"
+                        value={editing.discountValue}
+                        onChange={(e) => setEditing({...editing, discountValue: e.target.value})}
+                        className="flex-1 border-0 border-b border-[#6F4E37]/40 rounded-none bg-transparent shadow-none px-0 text-center focus-visible:ring-0 focus-visible:border-[#6F4E37] text-[#2B2118]"
+                      />
+                      <Select value={editing.discountKind} onValueChange={(v) => setEditing({...editing, discountKind: v})}>
+                        <SelectTrigger className="w-20 border border-[#6F4E37] rounded bg-transparent shadow-none px-2 focus:ring-0 focus:border-[#6F4E37] text-[#2B2118]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
+                          <SelectItem value="percent">% V</SelectItem>
+                          <SelectItem value="amount">₹ V</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <Button 
+          onClick={startNew} 
+          className="mb-6 bg-[#6F4E37]/10 hover:bg-[#6F4E37]/20 border border-[#6F4E37]/20 text-[#6F4E37] font-bold rounded-xl cursor-pointer shadow-none"
+        >
+          <Plus className="w-4 h-4 mr-1" /> New
+        </Button>
+      )}
       <Card className="bg-white border border-[#6F4E37]/25 rounded-3xl overflow-hidden shadow-md text-[#2B2118]">
         {loading ? (
           <div className="flex justify-center p-8 text-[#6F4E37]/60">
@@ -233,7 +389,7 @@ export default function CouponsPage() {
                         <Button 
                           size="icon" 
                           variant="ghost" 
-                          onClick={() => { setEditing(c); setOpen(true); }}
+                          onClick={() => { setEditing(c); }}
                           className="hover:bg-[#6F4E37]/10 text-[#6F4E37]/60 hover:text-[#6F4E37] h-8 w-8 rounded-lg cursor-pointer"
                         >
                           <Pencil className="w-4 h-4" />
@@ -261,148 +417,6 @@ export default function CouponsPage() {
           </div>
         )}
       </Card>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#2B2118] max-w-md rounded-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-[#6F4E37] font-extrabold text-lg">
-              {editing?.id ? "Edit" : "New"} Coupon/Promotion
-            </DialogTitle>
-          </DialogHeader>
-          {editing && (
-            <div className="space-y-4 py-2 text-sm text-[#6F4E37]/80">
-              <div className="space-y-1">
-                <Label className="text-xs text-[#6F4E37]/60">Name</Label>
-                <Input 
-                  value={editing.name} 
-                  onChange={(e) => setEditing({ ...editing, name: e.target.value })} 
-                  className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-[#6F4E37]/60">Type</Label>
-                <Select value={editing.type} onValueChange={(v) => setEditing({ ...editing, type: v })}>
-                  <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 rounded-xl text-[#2B2118]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
-                    <SelectItem value="Coupon">Coupon</SelectItem>
-                    <SelectItem value="Promotion">Promotion (Automated)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              {editing.type === "Coupon" && (
-                <div className="space-y-1">
-                  <Label className="text-xs text-[#6F4E37]/60">Coupon Code</Label>
-                  <Input 
-                    value={editing.code ?? ""} 
-                    onChange={(e) => setEditing({ ...editing, code: e.target.value })} 
-                    className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl font-mono uppercase"
-                  />
-                </div>
-              )}
-              {editing.type === "Promotion" && (
-                <>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-[#6F4E37]/60">Apply</Label>
-                    <Select value={editing.apply ?? "Order"} onValueChange={(v) => setEditing({ ...editing, apply: v })}>
-                      <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 rounded-xl text-[#2B2118]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
-                        <SelectItem value="Product">Product</SelectItem>
-                        <SelectItem value="Order">Order</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {editing.apply === "Product" ? (
-                    <>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-[#6F4E37]/60">Product</Label>
-                        <Select value={editing.productId ?? ""} onValueChange={(v) => setEditing({ ...editing, productId: v })}>
-                          <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 rounded-xl text-[#2B2118]">
-                            <SelectValue placeholder="Select product" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
-                            {products.map((p) => (
-                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-[#6F4E37]/60">Min Quantity</Label>
-                        <Input 
-                          type="number" 
-                          value={editing.minQty ?? 1} 
-                          onChange={(e) => setEditing({ ...editing, minQty: parseInt(e.target.value) || 1 })} 
-                          className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl"
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <div className="space-y-1">
-                      <Label className="text-xs text-[#6F4E37]/60">Minimum Order Amount (₹)</Label>
-                      <Input 
-                        type="number" 
-                        value={editing.minOrderAmount ?? 0} 
-                        onChange={(e) => setEditing({ ...editing, minOrderAmount: parseFloat(e.target.value) || 0 })} 
-                        className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl"
-                      />
-                    </div>
-                  )}
-                </>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-[#6F4E37]/60">Discount Value</Label>
-                  <Input 
-                    type="number" 
-                    value={editing.discountValue} 
-                    onChange={(e) => setEditing({ ...editing, discountValue: parseFloat(e.target.value) || 0 })} 
-                    className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-[#6F4E37]/60">Kind</Label>
-                  <Select value={editing.discountKind} onValueChange={(v) => setEditing({ ...editing, discountKind: v })}>
-                    <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 rounded-xl text-[#2B2118]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
-                      <SelectItem value="percent">% Percentage</SelectItem>
-                      <SelectItem value="amount">₹ Amount</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 pt-2">
-                <Switch 
-                  checked={editing.active} 
-                  onCheckedChange={(v) => setEditing({ ...editing, active: v })} 
-                  className="data-[state=checked]:bg-[#6F4E37]"
-                />
-                <Label className="cursor-pointer font-semibold">Active</Label>
-              </div>
-            </div>
-          )}
-          <DialogFooter className="flex gap-2 pt-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setOpen(false)}
-              className="border-[#6F4E37]/20 text-[#6F4E37]/60 hover:bg-[#FAF3E0] flex-1 cursor-pointer rounded-xl"
-            >
-              Discard
-            </Button>
-            <Button 
-              onClick={save}
-              className="bg-[#6F4E37] hover:bg-[#6F4E37]/90 text-white flex-1 font-bold cursor-pointer rounded-xl"
-            >
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </AdminShell>
   );
 }

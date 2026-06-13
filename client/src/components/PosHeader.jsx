@@ -82,71 +82,71 @@ export function PosHeader() {
   const isMainPos = pathname === "/pos" || pathname === "/pos/";
 
   const navLinkClass = (active) =>
-    `h-10 w-10 rounded-xl border flex items-center justify-center transition-all ${
+    `h-10 w-10 rounded-md border flex items-center justify-center transition-all ${
       active
-        ? "bg-[#6F4E37] border-[#6F4E37] text-white shadow-md shadow-[#6F4E37]/25"
-        : "border-[#6F4E37]/30 bg-white text-[#6F4E37] hover:bg-[#6F4E37] hover:text-white hover:border-[#6F4E37]"
+        ? "bg-[#6F4E37] border-[#6F4E37] text-white shadow-sm"
+        : "border-[#6F4E37]/30 bg-white text-[#6F4E37] hover:bg-[#FAF3E0] hover:text-[#6F4E37] hover:border-[#6F4E37]/50"
     }`;
 
   return (
-    <header className="h-16 border-b border-[#6F4E37]/20 bg-white flex items-center justify-between px-4 shrink-0 shadow-sm select-none">
+    <header className="h-16 border-b border-[#6F4E37]/20 bg-white flex items-center justify-between px-6 shrink-0 shadow-sm select-none z-30">
       <FloorPopup open={showFloor} onSelect={handleSelectTable} onOpenChange={setShowFloor} />
       <CustomerCaptureModal open={captureOpen} onOpenChange={setCaptureOpen} tableId={pendingTable} onSuccess={handleCustomerCaptured} />
 
       {/* 1. Logo and Brand */}
       <div className="flex items-center gap-2.5">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#6F4E37] shadow-md">
+        <div className="flex items-center gap-2.5 px-3 py-2 rounded-md bg-[#6F4E37] border border-[#6F4E37]/20 shadow-sm">
           <Coffee className="w-4 h-4 text-white" />
-          <span className="font-extrabold text-sm tracking-wide text-white uppercase">
+          <span className="font-bold text-[13px] tracking-wider text-white uppercase">
             Odoo Café
           </span>
         </div>
       </div>
 
       {/* 2. Product Search Bar */}
-      <div className="flex-1 max-w-xs md:max-w-md mx-4 relative">
+      <div className="flex-1 max-w-xs md:max-w-md mx-6 relative">
         {isMainPos ? (
           <div className="relative w-full">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6F4E37]/50" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#6F4E37]/60" />
             <input
               placeholder="Search products by name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#FAF3E0] text-[#2B2118] placeholder-[#6F4E37]/40 text-sm pl-9 pr-4 py-2 rounded-xl border border-[#6F4E37]/25 focus:bg-white focus:border-[#6F4E37] outline-none transition"
+              className="w-full bg-[#FAF3E0]/50 text-[#6F4E37] placeholder-[#6F4E37]/40 text-[13px] font-medium pl-9 pr-4 py-2 h-10 rounded-md border border-[#6F4E37]/30 focus:bg-white focus:border-[#6F4E37] focus:ring-1 focus:ring-[#6F4E37] outline-none transition-all"
             />
           </div>
         ) : (
-          <div className="w-full text-[#6F4E37]/50 text-xs font-semibold tracking-wider uppercase pl-2">
+          <div className="w-full text-[#6F4E37] text-[11px] font-bold tracking-[2px] uppercase pl-2">
             Odoo Café Management System
           </div>
         )}
       </div>
 
       {/* 3. Navigation items, Table Indicator, Employee, Hamburger */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-3">
         {/* POS Order Link */}
         <Link to="/pos" title="POS Order" className={navLinkClass(isMainPos)}>
-          <ShoppingCart className="w-4 h-4" />
+          <ShoppingCart className="w-4.5 h-4.5" />
         </Link>
 
         {/* Orders Link */}
         <Link to="/pos/orders" title="Orders" className={navLinkClass(pathname === "/pos/orders")}>
-          <ClipboardList className="w-4 h-4" />
+          <ClipboardList className="w-4.5 h-4.5" />
         </Link>
 
         {/* Customer Link */}
         <Link to="/pos/customers" title="Customer" className={navLinkClass(pathname === "/pos/customers")}>
-          <Users className="w-4 h-4" />
+          <Users className="w-4.5 h-4.5" />
         </Link>
 
         {/* Table View Trigger / Current Table Indicator */}
         <button
           onClick={() => setShowFloor(true)}
           title="Table View"
-          className={`h-10 px-3.5 rounded-xl border font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer ${
+          className={`h-10 px-4 rounded-md border font-bold text-[13px] flex items-center gap-2 transition-all cursor-pointer ${
             table
-              ? "bg-[#6F4E37]/10 border-[#6F4E37] text-[#6F4E37]"
-              : "border-[#6F4E37]/30 bg-white text-[#6F4E37] hover:bg-[#6F4E37] hover:text-white hover:border-[#6F4E37]"
+              ? "bg-[#6F4E37] border-[#6F4E37] text-white shadow-sm"
+              : "border-[#6F4E37]/30 bg-white text-[#6F4E37] hover:bg-[#FAF3E0] hover:text-[#6F4E37] hover:border-[#6F4E37]/50"
           }`}
         >
           <Grid3x3 className="w-4 h-4" />
@@ -155,13 +155,13 @@ export function PosHeader() {
 
         {/* Table Status Link */}
         <Link to="/pos/tables" title="Table Status" className={navLinkClass(pathname === "/pos/tables")}>
-          <LayoutGrid className="w-4 h-4" />
+          <LayoutGrid className="w-4.5 h-4.5" />
         </Link>
 
-        <div className="h-6 w-[1px] bg-[#6F4E37]/15 mx-1" />
+        <div className="h-6 w-px bg-[#6F4E37]/30 mx-2" />
 
         {/* Employee Icon & Name */}
-        <div className="flex items-center gap-2 text-xs font-bold text-[#6F4E37]">
+        <div className="flex items-center gap-2.5 text-[13px] font-bold text-[#6F4E37]">
           <div className="w-8 h-8 rounded-full bg-[#FAF3E0] border border-[#6F4E37]/30 flex items-center justify-center text-[#6F4E37]">
             <UserIcon className="w-4 h-4" />
           </div>
@@ -174,14 +174,14 @@ export function PosHeader() {
             <Button
               variant="ghost"
               size="icon"
-              className="border border-[#6F4E37]/25 text-[#6F4E37] h-10 w-10 rounded-xl hover:bg-[#6F4E37] hover:text-white cursor-pointer transition-all"
+              className="border border-[#6F4E37]/30 text-[#6F4E37] h-10 w-10 rounded-md hover:bg-[#FAF3E0] hover:text-[#6F4E37] cursor-pointer transition-all ml-1"
             >
               <Menu className="w-5 h-5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
-            className="w-56 bg-white border border-[#6F4E37]/20 text-[#2B2118] shadow-xl rounded-xl p-1.5"
+            className="w-56 bg-white border border-[#6F4E37]/30 text-[#6F4E37] shadow-xl rounded-md p-1.5"
           >
             {isAdmin && (
               <>
@@ -197,26 +197,26 @@ export function PosHeader() {
                   <DropdownMenuItem
                     key={to}
                     onClick={() => navigate(to)}
-                    className="hover:bg-[#FAF3E0] hover:text-[#6F4E37] rounded-lg cursor-pointer px-3.5 py-2.5 text-xs font-semibold transition"
+                    className="hover:bg-[#FAF3E0] hover:text-[#6F4E37] rounded-md cursor-pointer px-3.5 py-2.5 text-[13px] font-semibold transition"
                   >
-                    <Icon className="w-4 h-4 mr-2.5 text-[#6F4E37]" /> {label}
+                    <Icon className="w-4 h-4 mr-3 text-[#6F4E37]/70" /> {label}
                   </DropdownMenuItem>
                 ))}
-                <DropdownMenuSeparator className="bg-[#6F4E37]/15 my-1" />
+                <DropdownMenuSeparator className="bg-[#6F4E37]/20 my-1" />
               </>
             )}
             <DropdownMenuItem
               onClick={() => window.open("/kds", "_blank")}
-              className="hover:bg-[#FAF3E0] hover:text-[#6F4E37] rounded-lg cursor-pointer px-3.5 py-2.5 text-xs font-semibold transition"
+              className="hover:bg-[#FAF3E0] hover:text-[#6F4E37] rounded-md cursor-pointer px-3.5 py-2.5 text-[13px] font-semibold transition"
             >
-              <Monitor className="w-4 h-4 mr-2.5 text-[#6F4E37]" /> KDS
+              <Monitor className="w-4 h-4 mr-3 text-[#6F4E37]/70" /> KDS
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-[#6F4E37]/15 my-1" />
+            <DropdownMenuSeparator className="bg-[#6F4E37]/20 my-1" />
             <DropdownMenuItem
               onClick={handleLogout}
-              className="hover:bg-red-50 text-red-500 hover:text-red-600 rounded-lg cursor-pointer px-3.5 py-2.5 text-xs font-semibold transition"
+              className="hover:bg-red-50 text-red-600 rounded-md cursor-pointer px-3.5 py-2.5 text-[13px] font-semibold transition"
             >
-              <LogOut className="w-4 h-4 mr-2.5" /> Log Out
+              <LogOut className="w-4 h-4 mr-3" /> Log Out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -67,6 +67,7 @@ model Product {
 
 model PaymentMethod {
   id        String     @id @default(uuid())
+  name      String     @default("Payment Method")
   type      PaymentType
   isEnabled Boolean    @default(true)
   upiId     String?

@@ -48,6 +48,16 @@ export const updateProfile = async (req, res) => {
   }
 };
 
+export const updateEmployee = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await updateUser(id, req.body);
+    return successResponse(res, user, 'Employee updated successfully');
+  } catch (error) {
+    return errorResponse(res, error.message, 400, error);
+  }
+};
+
 export const removeEmployee = async (req, res) => {
   try {
     const { id } = req.params;

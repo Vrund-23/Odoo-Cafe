@@ -5,6 +5,7 @@ import {
   tableApi, couponApi, customerApi, orderApi, sessionApi, kitchenApi,
   saveToken, clearToken,
 } from "./api.js";
+import socket from "./socket.js";
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const pad = (n) => String(n).padStart(5, "0");
@@ -91,7 +92,7 @@ function normaliseCoupon(c) {
 function normalisePayment(p) {
   return {
     id: p.id,
-    name: p.type,
+    name: p.name || p.type,
     type: p.type,
     upiId: p.upiId ?? null,
     active: p.isEnabled,
@@ -182,6 +183,19 @@ export const useStore = create(
 
           // Fetch fresh KDS state on startup
           await get().fetchKds().catch((err) => console.error("KDS bootstrap fetch failed:", err));
+          
+          // Connect real-time socket and setup listeners
+          socket.connect();
+          socket.off("kds:ticket-created");
+          socket.off("kds:ticket-updated");
+          
+          socket.on("kds:ticket-created", () => {
+            get().fetchKds().catch((err) => console.error("Real-time fetchKds failed:", err));
+          });
+          
+          socket.on("kds:ticket-updated", () => {
+            get().fetchKds().catch((err) => console.error("Real-time fetchKds failed:", err));
+          });
         } catch (e) {
           console.error("Bootstrap error:", e);
           set({ loading: false });
@@ -236,6 +250,12 @@ export const useStore = create(
           }));
         } catch (e) { console.error(e); }
       },
+      // Sync-only: update local state without API call (used by admin booking page)
+      syncFloor: (f) => set((s) => ({
+        floors: s.floors.some((x) => x.id === f.id)
+          ? s.floors.map((x) => (x.id === f.id ? f : x))
+          : [...s.floors, f],
+      })),
       deleteFloor: async (id) => {
         try {
           await floorApi.delete(id);
@@ -245,6 +265,10 @@ export const useStore = create(
           }));
         } catch (e) { console.error(e); }
       },
+      syncDeleteFloor: (id) => set((s) => ({
+        floors: s.floors.filter((x) => x.id !== id),
+        tables: s.tables.filter((t) => t.floorId !== id),
+      })),
 
       // ── Tables ─────────────────────────────────────────────
       upsertTable: async (t) => {
@@ -264,18 +288,29 @@ export const useStore = create(
           }));
         } catch (e) { console.error(e); }
       },
+      // Sync-only: update local state without API call (used by admin booking page)
+      syncTable: (t) => set((s) => ({
+        tables: s.tables.some((x) => x.id === t.id)
+          ? s.tables.map((x) => (x.id === t.id ? t : x))
+          : [...s.tables, t],
+      })),
       deleteTable: async (id) => {
         try {
           await tableApi.delete(id);
           set((s) => ({ tables: s.tables.filter((x) => x.id !== id) }));
         } catch (e) { console.error(e); }
       },
+      syncDeleteTable: (id) => set((s) => ({ tables: s.tables.filter((x) => x.id !== id) })),
 
-
-
-
-
-
+      // ── Payment Methods ────────────────────────────────────
+      syncPaymentMethod: (p) => set((s) => ({
+        paymentMethods: s.paymentMethods.some((x) => x.id === p.id)
+          ? s.paymentMethods.map((x) => (x.id === p.id ? p : x))
+          : [...s.paymentMethods, p],
+      })),
+      syncDeletePaymentMethod: (id) => set((s) => ({
+        paymentMethods: s.paymentMethods.filter((x) => x.id !== id),
+      })),
 
       // ── Sessions ───────────────────────────────────────────
       openSession: async () => {
@@ -382,19 +417,11 @@ export const useStore = create(
           const line = l.qty * l.unitPrice;
           subtotal += line;
           tax += (line * p.tax) / 100;
-          const promo = s.coupons.find(
-            (c) => c.active && c.type === "Promotion" && c.apply === "Product" && c.productId === p.id && (c.minQty ?? 0) <= l.qty
-          );
-          if (promo) {
-            const amt = promo.discountKind === "percent" ? (line * promo.discountValue) / 100 : promo.discountValue;
-            productDiscountTotal += amt;
-            return { ...l, productDiscount: { label: `${promo.discountValue}${promo.discountKind === "percent" ? "%" : "₹"} off`, amount: amt } };
-          }
-          return { ...l, productDiscount: undefined };
+          return l;
         });
 
         let orderDiscount = 0, discountLabel;
-        const baseForOrderDisc = subtotal - productDiscountTotal;
+        const baseForOrderDisc = subtotal;
         const applyDisc = (kind, val, label) => {
           const amt = kind === "percent" ? (baseForOrderDisc * val) / 100 : val;
           orderDiscount = amt;
@@ -402,15 +429,34 @@ export const useStore = create(
         };
         if (couponCode) {
           const c = s.coupons.find((x) => x.active && x.type === "Coupon" && x.code?.toUpperCase() === couponCode.toUpperCase());
-          if (c) applyDisc(c.discountKind, c.discountValue, `${c.code} (${c.discountValue}${c.discountKind === "percent" ? "%" : "₹"})`);
+          if (c) applyDisc(c.discountKind, c.discountValue, `${c.code} (${c.discountKind === "percent" ? c.discountValue + "%" : "₹" + c.discountValue})`);
         } else if (autoPromoId) {
           const c = s.coupons.find((x) => x.id === autoPromoId && x.active);
           if (c) applyDisc(c.discountKind, c.discountValue, `${c.name}`);
         } else {
-          const promo = s.coupons.find(
-            (c) => c.active && c.type === "Promotion" && c.apply === "Order" && (c.minOrderAmount ?? 0) <= baseForOrderDisc
-          );
-          if (promo) applyDisc(promo.discountKind, promo.discountValue, `${promo.name}`);
+          // Evaluate Automated promotions (Both Order-level and Product-level)
+          const validPromos = s.coupons.filter((c) => {
+            if (!c.active || c.type !== "Promotion") return false;
+            
+            if (c.apply === "Order") {
+              return (c.minOrderAmount ?? 0) <= baseForOrderDisc;
+            } else if (c.apply === "Product") {
+              // Check if the order has enough quantity of the required product
+              const line = o.lines.find(l => l.productId === c.productId);
+              return line && line.qty >= (c.minQty ?? 0);
+            }
+            return false;
+          });
+
+          if (validPromos.length > 0) {
+            // Pick highest discount
+            const best = validPromos.reduce((prev, curr) => {
+              const pAmt = prev.discountKind === "percent" ? (baseForOrderDisc * prev.discountValue) / 100 : prev.discountValue;
+              const cAmt = curr.discountKind === "percent" ? (baseForOrderDisc * curr.discountValue) / 100 : curr.discountValue;
+              return cAmt > pAmt ? curr : prev;
+            });
+            applyDisc(best.discountKind, best.discountValue, best.name);
+          }
         }
         const discountTotal = productDiscountTotal + orderDiscount;
         const total = subtotal + tax - discountTotal;
@@ -555,7 +601,7 @@ export const useStore = create(
             return group;
           });
 
-          ticketList.sort((a, b) => a.createdAt - b.createdAt);
+          ticketList.sort((a, b) => b.createdAt - a.createdAt);
           set({ kds: ticketList });
         } catch (e) {
           console.error("fetchKds error:", e);

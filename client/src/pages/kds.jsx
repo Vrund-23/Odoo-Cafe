@@ -4,7 +4,39 @@ import { useStore } from "@/lib/store";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Coffee, Search, X } from "lucide-react";
+import { ArrowLeft, Coffee, Search, X, Clock } from "lucide-react";
+
+const TicketTimer = ({ createdAt, stage }) => {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (stage === 'Completed') return;
+    
+    const calculateElapsed = () => Math.floor((Date.now() - createdAt) / 1000);
+    setElapsed(calculateElapsed());
+    
+    const interval = setInterval(() => {
+      setElapsed(calculateElapsed());
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [createdAt, stage]);
+
+  if (stage === 'Completed') {
+    return <span className="text-[11px] font-bold text-zinc-400 flex items-center gap-1"><Clock className="w-3 h-3" /> Done</span>;
+  }
+
+  const mins = Math.floor(elapsed / 60);
+  const secs = elapsed % 60;
+  const color = mins >= 15 ? 'text-rose-500' : mins >= 10 ? 'text-amber-500' : 'text-[#6F4E37]/80';
+
+  return (
+    <span className={`text-[11px] font-bold flex items-center gap-1 ${color}`}>
+      <Clock className="w-3 h-3" />
+      {mins}:{secs.toString().padStart(2, '0')}
+    </span>
+  );
+};
 
 const STAGES = [
   { key: "all", label: "All" },
@@ -65,38 +97,53 @@ export default function KDSPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF3E0] text-[#2B2118]">
-      <header className="border-b border-[#6F4E37]/30 px-4 py-3 flex items-center gap-3 bg-white">
+      <header className="border-b border-[#6F4E37]/30 px-6 py-5 flex items-center gap-6 bg-white shadow-sm">
         <Link
           to="/pos"
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer bg-[#6F4E37] text-white hover:bg-[#6F4E37]/90 active:scale-[0.98] shadow-sm mr-2"
+          className="flex items-center justify-center gap-2 px-8 py-2.5 rounded-xl text-sm font-bold transition cursor-pointer bg-[#6F4E37] text-white hover:bg-[#6F4E37]/90 active:scale-[0.98] shadow-md shrink-0"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to POS</span>
         </Link>
-        <Coffee className="w-6 h-6 text-[#6F4E37]" />
-        <h1 className="font-bold text-lg text-[#6F4E37] tracking-tight">Kitchen Display</h1>
-        <div className="flex gap-1.5 ml-4">
-          {STAGES.map((s) => (
-            <button
-              key={s.key}
-              onClick={() => setTab(s.key)}
-              className={`px-3 py-1.5 rounded-xl text-sm font-semibold transition cursor-pointer ${
-                tab === s.key
-                  ? "bg-[#6F4E37] text-white"
-                  : "bg-white border border-[#6F4E37]/20 text-[#6F4E37] hover:bg-[#FAF3E0]"
-              }`}
-            >
-              {s.label} <span className="ml-1 text-xs opacity-75">{counts[s.key]}</span>
-            </button>
-          ))}
+        
+        <div className="flex items-center gap-2 shrink-0">
+          <Coffee className="w-7 h-7 text-[#6F4E37]" />
+          <h1 className="font-extrabold text-2xl text-[#2B2118] tracking-tight">Kitchen Display</h1>
         </div>
-        <div className="ml-auto relative w-64">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+
+        <div className="flex gap-2 ml-4 bg-[#FAF3E0] p-1.5 rounded-2xl shrink-0">
+          {STAGES.map((s) => {
+            const isSelected = tab === s.key;
+            return (
+              <button
+                key={s.key}
+                onClick={() => setTab(s.key)}
+                className={`flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold transition-all cursor-pointer ${
+                  isSelected
+                    ? "bg-white text-[#6F4E37] shadow-sm ring-1 ring-black/5"
+                    : "text-[#6F4E37]/70 hover:text-[#6F4E37] hover:bg-white/50"
+                }`}
+              >
+                {s.label}
+                <span 
+                  className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                    isSelected ? "bg-[#6F4E37]/10 text-[#6F4E37]" : "bg-[#6F4E37]/5 text-[#6F4E37]/60"
+                  }`}
+                >
+                  {counts[s.key]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="ml-auto relative w-80 shrink-0">
+          <Search className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" />
           <Input
             placeholder="Search ticket #..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="pl-9 bg-white text-[#2B2118] border-[#6F4E37]/20 focus:border-[#6F4E37] focus:bg-white rounded-xl placeholder:text-zinc-400"
+            className="pl-11 pr-4 py-6 bg-zinc-50 border-[#6F4E37]/20 focus:bg-white focus:border-[#6F4E37]/50 text-[#2B2118] rounded-2xl text-base shadow-inner"
           />
         </div>
       </header>
@@ -163,20 +210,22 @@ export default function KDSPage() {
             return (
               <Card
                 key={t.id}
-                className={`bg-white border-2 ${stageColor} p-3.5 hover:shadow-md transition duration-200 cursor-pointer rounded-3xl flex flex-col justify-between`}
+                className={`h-[320px] bg-white border-2 ${stageColor} p-3.5 hover:shadow-md transition duration-200 cursor-pointer rounded-3xl flex flex-col`}
                 onClick={() => {
                   const nx = NEXT[t.stage];
                   if (nx) setStage(t.id, nx);
                 }}
               >
-                <div>
-                  <div className="flex items-center justify-between mb-3 border-b border-[#6F4E37]/15 pb-2">
+                <div className="flex items-center justify-between mb-3 border-b border-[#6F4E37]/15 pb-2 shrink-0">
+                  <div>
                     <span className="font-extrabold text-lg text-[#2B2118]">#{t.orderNumber}</span>
-                    <Badge variant="outline" className="text-[#6F4E37] border-[#6F4E37]/20 bg-[#FAF3E0] font-bold">
-                      {t.stage}
-                    </Badge>
+                    <div className="mt-0.5"><TicketTimer createdAt={t.createdAt} stage={t.stage} /></div>
                   </div>
-                  <div className="space-y-2">
+                  <Badge variant="outline" className="text-[#6F4E37] border-[#6F4E37]/20 bg-[#FAF3E0] font-bold">
+                    {t.stage}
+                  </Badge>
+                </div>
+                <div className="space-y-2 overflow-y-auto flex-1 pr-1">
                     {t.items.map((i) => {
                       const p = products.find((x) => x.id === i.productId);
                       return (
@@ -198,9 +247,8 @@ export default function KDSPage() {
                       );
                     })}
                   </div>
-                </div>
                 {NEXT[t.stage] && (
-                  <div className="mt-4 pt-2 border-t border-[#6F4E37]/10 text-center text-xs text-zinc-500 font-bold">
+                  <div className="mt-3 pt-2 border-t border-[#6F4E37]/10 text-center text-xs text-zinc-500 font-bold shrink-0">
                     Click card to progress to {NEXT[t.stage]}
                   </div>
                 )}

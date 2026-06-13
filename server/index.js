@@ -3,7 +3,9 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import http from 'http';
 import routes from './src/routes/index.js';
+import { initSocket } from './src/config/socket.js';
 import { errorMiddleware } from './src/middlewares/error.middleware.js';
 
 dotenv.config();
@@ -26,6 +28,9 @@ app.get('/', (req, res) => {
 
 app.use(errorMiddleware);
 
-app.listen(PORT, () => {
+const server = http.createServer(app);
+initSocket(server);
+
+server.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

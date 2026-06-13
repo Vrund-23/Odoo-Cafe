@@ -182,6 +182,31 @@ export default function ProductsPage() {
     }
   };
 
+  const createTable = async () => {
+    if (!newTableName?.trim()) return;
+    const colors = ["#F59E0B", "#EC4899", "#10B981", "#3B82F6", "#8B5CF6"];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    try {
+      const res = await fetch(`${BASE_URL}/tables`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ name: newTableName, color }),
+      });
+      if (!res.ok) throw new Error("Failed to create table");
+      const json = await res.json();
+      const savedTable = json.data || json;
+
+      setTables((prev) => [...prev, savedTable]);
+      if (editing) setEditing({ ...editing, tableId: savedTable.id });
+      setNewTableName("");
+      setTableOpen(false);
+      toast.success("Table created successfully");
+    } catch (err) {
+      toast.error(err.message || "Failed to create table");
+    }
+  };
+
+
 
   return (
     <AdminShell title="Products">

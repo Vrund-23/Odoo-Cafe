@@ -41,6 +41,7 @@ export default function UsersPage() {
   const [open, setOpen] = useState(false);
   const [pwdFor, setPwdFor] = useState(null);
   const [pwd, setPwd] = useState("");
+  const [deleteFor, setDeleteFor] = useState(null);
 
   useEffect(() => {
     fetchUsers();
@@ -130,10 +131,14 @@ export default function UsersPage() {
         method: "DELETE",
         headers: getAuthHeaders(),
       });
-      if (!res.ok) throw new Error("Failed to delete user");
+      if (!res.ok) {
+        const d = await res.json().catch(()=>({}));
+        throw new Error(d.message || "Failed to delete user. They might have existing orders.");
+      }
       
       setUsers((prev) => prev.filter((x) => x.id !== id));
       toast.success("Deleted");
+      setDeleteFor(null);
     } catch (err) {
       toast.error(err.message || "Failed to delete user");
     }
@@ -242,14 +247,14 @@ export default function UsersPage() {
                           variant="ghost" 
                           title="Archive" 
                           onClick={() => archive(u.id)}
-                          className="hover:bg-[#6F4E37]/10 text-[#6F4E37]/60 hover:text-[#6F4E37] h-8 w-8 rounded-lg cursor-pointer"
+                          className={`hover:bg-[#6F4E37]/10 text-[#6F4E37]/60 hover:text-[#6F4E37] h-8 w-8 rounded-lg cursor-pointer ${!u.active ? 'bg-[#6F4E37]/10 text-[#6F4E37]' : ''}`}
                         >
                           <Archive className="w-4 h-4" />
                         </Button>
                         <Button 
                           size="icon" 
                           variant="ghost" 
-                          onClick={() => del(u.id)}
+                          onClick={() => setDeleteFor(u)}
                           className="hover:bg-red-500/10 text-[#6F4E37]/60 hover:text-red-400 h-8 w-8 rounded-lg cursor-pointer"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -364,6 +369,36 @@ export default function UsersPage() {
               className="bg-[#6F4E37] hover:bg-[#6F4E37]/90 text-white flex-1 font-bold cursor-pointer rounded-xl"
             >
               Update Password
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!deleteFor} onOpenChange={(v) => !v && setDeleteFor(null)}>
+        <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#2B2118] max-w-sm rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-red-500 font-extrabold text-lg">Are you sure?</DialogTitle>
+          </DialogHeader>
+          <div className="py-2 space-y-2">
+            <p className="text-sm text-[#2B2118]/80">
+              Are you sure you want to delete the user <strong className="text-[#6F4E37]">{deleteFor?.name}</strong>? 
+            </p>
+            <p className="text-xs text-red-500/80 font-semibold">
+              This action cannot be undone. If they have processed any orders, deletion might fail.
+            </p>
+          </div>
+          <DialogFooter className="flex gap-2 pt-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setDeleteFor(null)}
+              className="border-[#6F4E37]/20 text-[#6F4E37]/60 hover:bg-[#FAF3E0] flex-1 cursor-pointer rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => del(deleteFor.id)}
+              className="bg-red-500 hover:bg-red-600 text-white flex-1 font-bold cursor-pointer rounded-xl"
+            >
+              Confirm Delete
             </Button>
           </DialogFooter>
         </DialogContent>

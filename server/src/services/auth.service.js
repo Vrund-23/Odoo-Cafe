@@ -92,12 +92,12 @@ export const getAllUsers = async (limit = 10, page = 1) => {
   const skip = (page - 1) * limit;
 
   const users = await prisma.user.findMany({
-    where: { isArchived: false },
     select: {
       id: true,
       name: true,
       email: true,
       role: true,
+      isArchived: true,
       createdAt: true,
     },
     skip,
@@ -105,19 +105,17 @@ export const getAllUsers = async (limit = 10, page = 1) => {
     orderBy: { createdAt: 'desc' },
   });
 
-  const total = await prisma.user.count({
-    where: { isArchived: false },
-  });
+  const total = await prisma.user.count();
 
   return { users, total };
 };
 
 export const updateUser = async (userId, data) => {
-  const { name, email, password, role } = data;
+  const { name, email, password, role, isArchived } = data;
 
   const updateData = {};
-  if (name) updateData.name = name;
-  if (email) {
+  if (name !== undefined) updateData.name = name;
+  if (email !== undefined) {
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
@@ -129,7 +127,8 @@ export const updateUser = async (userId, data) => {
   if (password) {
     updateData.password = await hashPassword(password);
   }
-  if (role) updateData.role = role;
+  if (role !== undefined) updateData.role = role;
+  if (isArchived !== undefined) updateData.isArchived = isArchived;
 
   const user = await prisma.user.update({
     where: { id: userId },
@@ -139,6 +138,7 @@ export const updateUser = async (userId, data) => {
       name: true,
       email: true,
       role: true,
+      isArchived: true,
       createdAt: true,
     },
   });
@@ -147,9 +147,8 @@ export const updateUser = async (userId, data) => {
 };
 
 export const deleteUser = async (userId) => {
-  const user = await prisma.user.update({
+  const user = await prisma.user.delete({
     where: { id: userId },
-    data: { isArchived: true },
     select: { id: true, name: true, email: true },
   });
 

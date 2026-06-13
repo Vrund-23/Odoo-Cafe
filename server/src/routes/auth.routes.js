@@ -11,6 +11,7 @@ router.post('/login', validateRequest(loginValidator), authController.login);
 router.get('/profile', authMiddleware, authController.getProfile);
 router.get('/employees', authMiddleware, authController.getAllEmployees);
 router.put('/profile', authMiddleware, validateRequest(updateUserValidator), authController.updateProfile);
+router.put('/employees/:id', authMiddleware, authController.updateEmployee);
 router.delete('/employees/:id', authMiddleware, authController.removeEmployee);
 
 export default router;

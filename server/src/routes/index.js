@@ -10,6 +10,7 @@ import tableRoutes from './table.routes.js';
 import couponRoutes from './coupon.routes.js';
 import customerRoutes from './customer.routes.js';
 import paymentMethodRoutes from './payment-method.routes.js';
+import paymentRoutes from './payment.routes.js';
 
 const router = express.Router();
 
@@ -24,5 +25,6 @@ router.use('/tables', tableRoutes);
 router.use('/coupons', couponRoutes);
 router.use('/customers', customerRoutes);
 router.use('/payment-methods', paymentMethodRoutes);
+router.use('/payment', paymentRoutes);
 
 export default router;

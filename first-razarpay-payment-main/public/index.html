@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <h1>Hello from razorpay</h1>
+
+    <h2>Pay 100 inr for our services : </h2>
+    <button id="pay-now">Pay now</button>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+    <script>
+        async function paynow() {
+            const full_name = prompt("Enter your name");
+            const mail = prompt("Enter your mail id");
+            const phone = prompt("Enter your phone number");
+            const pay = await fetch('/pay', {
+                method: "POST"
+            });
+            const _json = await pay.json()
+            const option = {
+                key: 'rzp_test_JZP7VUVviDOqVv',
+                amount: 10000,
+                currency: 'INR',
+                name: "MICRO SERVICES",
+                description: "Pay for IT solution",
+                order_id: _json.order.id,
+                callback_url: "/verify",
+prefill: {
+          name: full_name,
+          email: mail,
+          contact: phone
+        },
+        theme: {
+          color: '#F37254'
+        },
+            }
+            const rzp = new Razorpay(option);
+            rzp.open()
+        }
+
+        document.getElementById('pay-now').addEventListener('click', paynow)
+    </script>
+</body>
+</html>

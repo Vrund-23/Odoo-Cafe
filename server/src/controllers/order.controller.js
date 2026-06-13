@@ -4,11 +4,13 @@ import * as productService from '../services/product.service.js';
 import { successResponse, errorResponse, paginatedResponse } from '../utils/response.util.js';
 import { sendReceiptEmail } from '../services/email.service.js';
 import prisma from '../config/database.js';
+import { emitEvent } from '../config/socket.js';
 
 export const createOrder = async (req, res) => {
   try {
     const order = await orderService.createOrder(req.body);
 
+    let hasKitchenOrder = false;
     for (const item of req.body.items) {
       if (item.productId) {
         const product = await productService.getProductById(item.productId);
@@ -18,8 +20,13 @@ export const createOrder = async (req, res) => {
             order.orderItems.find(oi => oi.productId === item.productId)?.id,
             item.productId
           );
+          hasKitchenOrder = true;
         }
       }
+    }
+
+    if (hasKitchenOrder) {
+      emitEvent('kds:ticket-created', { orderId: order.id });
     }
 
     return successResponse(res, order, 'Order created successfully', 201);

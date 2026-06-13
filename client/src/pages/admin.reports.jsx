@@ -18,6 +18,9 @@ import {
 } from "recharts";
 import { format, startOfDay, startOfWeek, startOfMonth } from "date-fns";
 import { Download } from "lucide-react";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 export default function ReportsPage() {
   const orders = useStore((s) => s.orders);
@@ -96,20 +99,110 @@ export default function ReportsPage() {
 
   const topOrders = [...filtered].sort((a, b) => b.total - a.total).slice(0, 5);
 
-  const exportCSV = () => {
-    const rows = [["Order", "Date", "Customer", "Total"], ...filtered.map((o) => [
-      o.number,
+  const exportExcel = () => {
+    const wb = XLSX.utils.book_new();
+    
+    // Sheet 1: Summary
+    const summaryData = [
+      ["Sales Report Summary"],
+      [],
+      ["Period", period.toUpperCase()],
+      ["Total Orders", totalOrders],
+      ["Total Revenue", `₹${revenue.toFixed(2)}`],
+      ["Average Order", `₹${avg.toFixed(2)}`]
+    ];
+    const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+    // Sheet 2: Orders
+    const orderRows = [["Order Number", "Date", "Customer", "Amount"]];
+    filtered.forEach((o) => {
+      const c = customers.find((x) => x.id === o.customerId);
+      orderRows.push([
+        o.number || o.id.slice(0, 6),
+        format(new Date(o.createdAt), "yyyy-MM-dd HH:mm"),
+        c?.name ?? "Guest",
+        o.total
+      ]);
+    });
+    const wsOrders = XLSX.utils.aoa_to_sheet(orderRows);
+    XLSX.utils.book_append_sheet(wb, wsOrders, "Orders");
+
+    // Sheet 3: Products
+    const prodRows = [["Product", "Quantity Sold", "Revenue"]];
+    topProducts.forEach((p) => {
+      prodRows.push([p.name, p.qty, p.rev]);
+    });
+    const wsProducts = XLSX.utils.aoa_to_sheet(prodRows);
+    XLSX.utils.book_append_sheet(wb, wsProducts, "Top Products");
+
+    XLSX.writeFile(wb, `OdooCafe_Report_${format(new Date(), "yyyyMMdd_HHmm")}.xlsx`);
+  };
+
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(111, 78, 55); // #6F4E37
+    doc.text("Odoo Cafe - Sales Report", 14, 22);
+    
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(`Generated on: ${format(new Date(), "PPP p")}`, 14, 30);
+    doc.text(`Period: ${period.toUpperCase()}`, 14, 36);
+    
+    // Summary Box
+    doc.autoTable({
+      startY: 45,
+      head: [['Total Orders', 'Total Revenue', 'Average Order']],
+      body: [[
+        totalOrders.toString(),
+        `Rs. ${revenue.toFixed(2)}`,
+        `Rs. ${avg.toFixed(2)}`
+      ]],
+      theme: 'grid',
+      headStyles: { fillColor: [111, 78, 55], textColor: 255 },
+      styles: { halign: 'center', fontSize: 12, fontStyle: 'bold' }
+    });
+
+    // Orders Table
+    doc.setFontSize(14);
+    doc.setTextColor(111, 78, 55);
+    doc.text("Order Details", 14, doc.lastAutoTable.finalY + 15);
+    
+    const orderBody = filtered.map((o) => [
+      o.number || o.id.slice(0, 6),
       format(new Date(o.createdAt), "yyyy-MM-dd HH:mm"),
-      customers.find((c) => c.id === o.customerId)?.name ?? "",
-      o.total.toFixed(2),
-    ])];
-    const csv = rows.map((r) => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `report-${Date.now()}.csv`;
-    a.click();
+      customers.find((c) => c.id === o.customerId)?.name ?? "Guest",
+      `Rs. ${o.total.toFixed(2)}`
+    ]);
+
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 20,
+      head: [['Order #', 'Date', 'Customer', 'Amount']],
+      body: orderBody,
+      headStyles: { fillColor: [111, 78, 55] },
+      alternateRowStyles: { fillColor: [250, 243, 224] },
+    });
+
+    // Products Table
+    doc.text("Top Products", 14, doc.lastAutoTable.finalY + 15);
+    const prodBody = topProducts.map((p) => [
+      p.name,
+      p.qty.toString(),
+      `Rs. ${p.rev.toFixed(2)}`
+    ]);
+
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 20,
+      head: [['Product', 'Quantity Sold', 'Revenue']],
+      body: prodBody,
+      headStyles: { fillColor: [111, 78, 55] },
+      alternateRowStyles: { fillColor: [250, 243, 224] },
+    });
+
+    doc.save(`OdooCafe_Report_${format(new Date(), "yyyyMMdd_HHmm")}.pdf`);
   };
 
   return (
@@ -160,14 +253,14 @@ export default function ReportsPage() {
         <div className="ml-auto flex gap-2">
           <Button 
             variant="outline" 
-            onClick={exportCSV}
+            onClick={exportExcel}
             className="border-[#6F4E37]/25 text-[#6F4E37]/80 hover:bg-[#FAF3E0] rounded-xl cursor-pointer"
           >
-            <Download className="w-4 h-4 mr-1.5 inline" /> CSV/XLS
+            <Download className="w-4 h-4 mr-1.5 inline" /> Excel (XLSX)
           </Button>
           <Button 
             variant="outline" 
-            onClick={() => window.print()}
+            onClick={exportPDF}
             className="border-[#6F4E37]/25 text-[#6F4E37]/80 hover:bg-[#FAF3E0] rounded-xl cursor-pointer"
           >
             <Download className="w-4 h-4 mr-1.5 inline" /> PDF

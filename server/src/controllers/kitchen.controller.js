@@ -1,5 +1,6 @@
 import * as kitchenService from '../services/kitchen.service.js';
 import { successResponse, errorResponse } from '../utils/response.util.js';
+import { emitEvent } from '../config/socket.js';
 
 export const getAllKitchenOrders = async (req, res) => {
   try {
@@ -26,6 +27,7 @@ export const updateKitchenOrderStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
     const order = await kitchenService.updateKitchenOrderStatus(id, status);
+    emitEvent('kds:ticket-updated', { ticketId: order.orderId, status });
     return successResponse(res, order, 'Kitchen order status updated successfully');
   } catch (error) {
     return errorResponse(res, error.message, 400, error);
@@ -47,6 +49,7 @@ export const completeKitchenOrder = async (req, res) => {
   try {
     const { id } = req.params;
     const order = await kitchenService.completeKitchenOrder(id);
+    emitEvent('kds:ticket-updated', { ticketId: order.orderId, status: 'COMPLETED' });
     return successResponse(res, order, 'Kitchen order completed successfully');
   } catch (error) {
     return errorResponse(res, error.message, 400, error);

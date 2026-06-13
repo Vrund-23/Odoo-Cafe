@@ -71,6 +71,12 @@ export const paymentApi = {
   delete: (id) => request("DELETE", `/payment-methods/${id}`),
 };
 
+// ── Payment Gateway (Razorpay) ────────────────────────────
+export const paymentGatewayApi = {
+  createOrder: (data) => request("POST", "/payment/razorpay/order", data),
+  verifyPayment: (data) => request("POST", "/payment/razorpay/verify", data),
+};
+
 // ── Floors ────────────────────────────────────────────────
 export const floorApi = {
   getAll: () => request("GET", "/floors"),
