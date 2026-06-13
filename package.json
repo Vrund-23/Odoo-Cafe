@@ -2,13 +2,13 @@
   "name": "odoo-cafe",
   "private": true,
   "workspaces": [
-    "apps/*",
+    "client",
     "packages/*"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace=apps/pos",
-    "build": "npm run build --workspace=apps/pos",
-    "lint": "npm run lint --workspace=apps/pos",
-    "format": "npm run format --workspace=apps/pos"
+    "dev": "npm run dev --workspace=odoo-cafe-pos",
+    "build": "npm run build --workspace=odoo-cafe-pos",
+    "lint": "npm run lint --workspace=odoo-cafe-pos",
+    "format": "npm run format --workspace=odoo-cafe-pos"
   }
 }
