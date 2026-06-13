@@ -15,6 +15,7 @@ function AuthPage() {
   const [email, setEmail] = useState("admin@cafe.com");
   const [password, setPassword] = useState("admin");
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const login = useStore((s) => s.login);
   const openSession = useStore((s) => s.openSession);
   const navigate = useNavigate();
@@ -36,17 +37,23 @@ function AuthPage() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const user = login(email, password);
-    if (!user) {
-      toast.error("Invalid email or password");
-      return;
+    setIsLoading(true);
+    try {
+      const user = await login(email, password);
+      if (!user) {
+        toast.error("Invalid email or password");
+        return;
+      }
+      await openSession();
+      toast.success(`Welcome back, ${user.name}!`);
+      navigate({ to: "/pos" });
+    } catch {
+      toast.error("Login failed. Check your credentials.");
+    } finally {
+      setIsLoading(false);
     }
-
-    openSession();
-    toast.success(`Welcome back, ${user.name}!`);
-    navigate({ to: "/pos" });
   };
 
   return (
@@ -139,9 +146,10 @@ function AuthPage() {
           <Button
             type="submit"
             id="login-submit"
-            className="w-full bg-[#6F4E37] hover:bg-[#6F4E37]/90 active:scale-[0.99] text-white font-extrabold py-5 rounded-xl transition-all shadow-md shadow-[#6F4E37]/20 mt-6 cursor-pointer"
+            disabled={isLoading}
+            className="w-full bg-[#6F4E37] hover:bg-[#6F4E37]/90 active:scale-[0.99] text-white font-extrabold py-5 rounded-xl transition-all shadow-md shadow-[#6F4E37]/20 mt-6 cursor-pointer disabled:opacity-60"
           >
-            Login to Workspace
+            {isLoading ? "Logging in..." : "Login to Workspace"}
           </Button>
         </form>
 
@@ -151,14 +159,54 @@ function AuthPage() {
             Demo Credentials
           </p>
           <div className="mt-2 text-xs text-[#2B2118]/60 font-medium grid grid-cols-2 gap-1 px-4">
-            <div className="bg-[#FAF3E0] py-1.5 px-2 rounded-lg border border-[#6F4E37]/15">
+            <button
+              type="button"
+              onClick={() => {
+                setEmail("admin@cafe.com");
+                setPassword("admin");
+                setSelectedRole("admin");
+              }}
+              className="bg-[#FAF3E0] py-1.5 px-2 rounded-lg border border-[#6F4E37]/15 text-left cursor-pointer hover:bg-[#6F4E37]/5 transition active:scale-[0.98]"
+            >
               <span className="text-[#6F4E37] block text-[9px] uppercase font-bold">Admin</span>
               admin@cafe.com / admin
-            </div>
-            <div className="bg-[#FAF3E0] py-1.5 px-2 rounded-lg border border-[#6F4E37]/15">
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail("eric@cafe.com");
+                setPassword("eric");
+                setSelectedRole("employee");
+              }}
+              className="bg-[#FAF3E0] py-1.5 px-2 rounded-lg border border-[#6F4E37]/15 text-left cursor-pointer hover:bg-[#6F4E37]/5 transition active:scale-[0.98]"
+            >
               <span className="text-[#6F4E37] block text-[9px] uppercase font-bold">Employee</span>
               eric@cafe.com / eric
-            </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail("emp1@cafe.com");
+                setPassword("123qwe");
+                setSelectedRole("employee");
+              }}
+              className="bg-[#FAF3E0] py-1.5 px-2 rounded-lg border border-[#6F4E37]/15 text-left cursor-pointer hover:bg-[#6F4E37]/5 transition active:scale-[0.98]"
+            >
+              <span className="text-[#6F4E37] block text-[9px] uppercase font-bold">Employee 1</span>
+              emp1@cafe.com / 123qwe
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setEmail("emp2@cafe.com");
+                setPassword("123qwe");
+                setSelectedRole("employee");
+              }}
+              className="bg-[#FAF3E0] py-1.5 px-2 rounded-lg border border-[#6F4E37]/15 text-left cursor-pointer hover:bg-[#6F4E37]/5 transition active:scale-[0.98]"
+            >
+              <span className="text-[#6F4E37] block text-[9px] uppercase font-bold">Employee 2</span>
+              emp2@cafe.com / 123qwe
+            </button>
           </div>
         </div>
       </Card>

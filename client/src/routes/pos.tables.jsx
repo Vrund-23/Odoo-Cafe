@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useStore } from "@/lib/store";
 import { Users, Check, Clock, Coffee, UtensilsCrossed } from "lucide-react";
@@ -80,7 +80,7 @@ function TablesView() {
   };
 
   return (
-    <div className="p-6 bg-[#FAF3E0] text-white min-h-[calc(100vh-4rem)] space-y-6 select-none">
+    <div className="p-6 bg-[#FAF3E0] text-[#2B2118] min-h-[calc(100vh-4rem)] space-y-6 select-none">
       {/* Header section with Stats Dashboard */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-[#6F4E37]/30 shadow-md">
         <div className="space-y-1">
@@ -88,7 +88,7 @@ function TablesView() {
             <span className="p-2 bg-[#6F4E37]/10 text-[#6F4E37] rounded-lg">
               <Coffee className="w-5 h-5" />
             </span>
-            <h1 className="text-2xl font-extrabold tracking-tight text-white">Floor & Tables</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight text-[#6F4E37]">Floor & Tables</h1>
           </div>
           <p className="text-sm text-[#6F4E37]/60">Select a table to manage its order session.</p>
         </div>
@@ -96,25 +96,25 @@ function TablesView() {
         {/* Real-time stats widgets */}
         <div className="flex flex-wrap items-center gap-4 sm:gap-6">
           <div className="flex items-center gap-3 bg-[#FAF3E0]/40 px-4 py-2.5 rounded-xl border border-[#6F4E37]/20 shadow-sm">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
             <div>
-              <div className="text-[10px] uppercase font-bold text-zinc-500">Available</div>
-              <div className="text-sm font-extrabold text-zinc-200">{availableTablesCount} Tables</div>
+              <div className="text-[10px] uppercase font-bold text-[#6F4E37]/60">Available</div>
+              <div className="text-sm font-extrabold text-[#6F4E37]">{availableTablesCount} Tables</div>
             </div>
           </div>
 
           <div className="flex items-center gap-3 bg-[#FAF3E0]/40 px-4 py-2.5 rounded-xl border border-[#6F4E37]/20 shadow-sm">
             <div className="w-2.5 h-2.5 rounded-full bg-[#6F4E37]" />
             <div>
-              <div className="text-[10px] uppercase font-bold text-zinc-500">Occupied</div>
-              <div className="text-sm font-extrabold text-zinc-200">{occupiedTablesCount} Tables</div>
+              <div className="text-[10px] uppercase font-bold text-[#6F4E37]/60">Occupied</div>
+              <div className="text-sm font-extrabold text-[#6F4E37]">{occupiedTablesCount} Tables</div>
             </div>
           </div>
 
           <div className="flex items-center gap-3 bg-[#FAF3E0]/40 px-4 py-2.5 rounded-xl border border-[#6F4E37]/20 shadow-sm min-w-32">
             <div className="w-full">
               <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] uppercase font-bold text-zinc-500">Occupancy</span>
+                <span className="text-[10px] uppercase font-bold text-[#6F4E37]/60">Occupancy</span>
                 <span className="text-xs font-extrabold text-[#6F4E37]">{occupancyRate}%</span>
               </div>
               <div className="w-full bg-[#FAF3E0] h-1.5 rounded-full overflow-hidden">
@@ -141,7 +141,7 @@ function TablesView() {
               className={`px-5 py-2.5 rounded-xl text-sm font-extrabold tracking-wide transition-all duration-200 shrink-0 cursor-pointer ${
                 activeFloorId === f.id
                   ? "bg-[#6F4E37] text-white shadow-md shadow-[#6F4E37]/15 scale-[1.02]"
-                  : "bg-[#FAF3E0]/50 hover:bg-[#FAF3E0]/80 text-[#6F4E37]/80 border border-[#6F4E37]/10 hover:border-[#6F4E37]/30"
+                  : "bg-white hover:bg-[#FAF3E0]/80 text-[#6F4E37]/80 border border-[#6F4E37]/15 hover:border-[#6F4E37]/30"
               }`}
             >
               {f.name}
@@ -152,7 +152,7 @@ function TablesView() {
         {/* Filter Toolbar */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           {/* Capacity Filters */}
-          <div className="flex items-center bg-[#FAF3E0]/40 p-1 rounded-xl border border-[#6F4E37]/20">
+          <div className="flex items-center bg-white p-1 rounded-xl border border-[#6F4E37]/20">
             {["all", "2", "4", "6+"].map((cap) => (
               <button
                 key={cap}
@@ -160,7 +160,7 @@ function TablesView() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                   capacityFilter === cap
                     ? "bg-[#6F4E37] text-white shadow-sm font-extrabold"
-                    : "text-[#6F4E37]/60 hover:text-white"
+                    : "text-[#6F4E37]/70 hover:bg-[#FAF3E0]"
                 }`}
               >
                 {cap === "all" ? "All Sizes" : cap === "6+" ? "6+ Seats" : `${cap} Seats`}
@@ -169,7 +169,7 @@ function TablesView() {
           </div>
 
           {/* Status Filters */}
-          <div className="flex items-center bg-[#FAF3E0]/40 p-1 rounded-xl border border-[#6F4E37]/20">
+          <div className="flex items-center bg-white p-1 rounded-xl border border-[#6F4E37]/20">
             {[
               { id: "all", label: "All Status" },
               { id: "available", label: "Available" },
@@ -181,7 +181,7 @@ function TablesView() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
                   statusFilter === status.id
                     ? "bg-[#6F4E37] text-white shadow-sm font-extrabold"
-                    : "text-[#6F4E37]/60 hover:text-white"
+                    : "text-[#6F4E37]/70 hover:bg-[#FAF3E0]"
                 }`}
               >
                 {status.label}
@@ -201,21 +201,23 @@ function TablesView() {
 
             // Define styling colors based on table status
             let borderStyle = "border-[#6F4E37]/20 bg-white hover:border-[#6F4E37]/55 hover:shadow-lg";
-            let statusBadge = "bg-[#FAF3E0]/50 text-emerald-400";
+            let statusBadge = "bg-[#FAF3E0] text-emerald-600 border border-emerald-200";
             let statusText = "Available";
-            let tableColor = "fill-[#D4A373]/15 stroke-[#6F4E37]/50 group-hover:stroke-[#6F4E37]";
-            let chairColor = "fill-emerald-500/80";
+            let tableColor = "fill-[#D4A373]/10 stroke-[#6F4E37]/70 group-hover:stroke-[#6F4E37]";
+            let chairColor = "fill-emerald-500";
+            let overlayTextColor = "text-[#6F4E37]";
 
             if (isBusy) {
-              borderStyle = "border-[#6F4E37] bg-[#6F4E37]/10 hover:bg-[#6F4E37]/15 hover:shadow-lg";
-              statusBadge = "bg-[#6F4E37]/30 text-[#6F4E37]";
+              borderStyle = "border-[#6F4E37] bg-[#6F4E37]/5 hover:bg-[#6F4E37]/10 hover:shadow-lg";
+              statusBadge = "bg-[#6F4E37] text-white";
               statusText = "Occupied";
-              tableColor = "fill-[#6F4E37]/20 stroke-[#6F4E37]";
+              tableColor = "fill-[#6F4E37]/10 stroke-[#6F4E37]";
               chairColor = "fill-[#6F4E37]";
+              overlayTextColor = "text-[#6F4E37]";
             }
 
             if (isSelected) {
-              borderStyle = "ring-2 ring-[#6F4E37] border-[#6F4E37] bg-[#6F4E37]/15 shadow-md";
+              borderStyle = "ring-2 ring-[#6F4E37] border-[#6F4E37] bg-[#6F4E37]/10 shadow-md";
             }
 
             return (
@@ -232,8 +234,8 @@ function TablesView() {
                   <span className={`text-[9px] font-extrabold tracking-wider uppercase px-2 py-0.5 rounded-full ${statusBadge}`}>
                     {statusText}
                   </span>
-                  <div className="flex items-center gap-1.5 text-[#6F4E37]/60">
-                    <Users className="w-3.5 h-3.5 text-zinc-500" />
+                  <div className="flex items-center gap-1.5 text-[#6F4E37]/70">
+                    <Users className="w-3.5 h-3.5" />
                     <span className="text-xs font-bold">{t.seats}</span>
                   </div>
                 </div>
@@ -267,7 +269,7 @@ function TablesView() {
                   </svg>
 
                   {/* Table Number Overlay */}
-                  <span className="absolute text-xl font-extrabold tracking-tight text-white group-hover:scale-110 transition-transform duration-300">
+                  <span className={`absolute text-xl font-extrabold tracking-tight ${overlayTextColor} group-hover:scale-110 transition-transform duration-300`}>
                     {t.number}
                   </span>
                 </div>
@@ -276,16 +278,16 @@ function TablesView() {
                 <div className="w-full border-t border-[#6F4E37]/10 pt-3 mt-2 flex flex-col gap-1.5 items-center text-center">
                   {isBusy ? (
                     <div className="w-full">
-                      <div className="text-xs font-extrabold text-white">
+                      <div className="text-xs font-extrabold text-[#6F4E37]">
                         ₹{draftOrder.total.toLocaleString()}
                       </div>
-                      <div className="text-[10px] text-[#6F4E37]/60 flex items-center justify-center gap-1 mt-0.5">
+                      <div className="text-[10px] text-[#6F4E37]/60 flex items-center justify-center gap-1 mt-0.5 font-semibold">
                         <Clock className="w-3 h-3 text-[#6F4E37]" />
                         <span>{formatTimeAgo(draftOrder.createdAt)}</span>
                       </div>
                     </div>
                   ) : (
-                    <div className="text-[10px] font-extrabold text-emerald-400 flex items-center gap-1">
+                    <div className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
                       <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       <span>Ready to seat</span>
                     </div>
@@ -294,7 +296,7 @@ function TablesView() {
 
                 {/* Selection Checkmark Badge */}
                 {isSelected && (
-                  <div className="absolute -top-2.5 -right-2 bg-[#6F4E37] text-white rounded-full p-1 shadow-md border border-[#16181E]">
+                  <div className="absolute -top-2.5 -right-2 bg-[#6F4E37] text-white rounded-full p-1 shadow-md border border-white">
                     <Check className="w-3.5 h-3.5 stroke-[3]" />
                   </div>
                 )}
@@ -306,8 +308,8 @@ function TablesView() {
         /* Empty State */
         <div className="bg-white border-2 border-dashed border-[#6F4E37]/25 rounded-3xl p-12 text-center max-w-md mx-auto">
           <UtensilsCrossed className="w-12 h-12 text-[#6F4E37]/40 mx-auto mb-4" />
-          <h3 className="text-base font-bold text-white">No tables match filters</h3>
-          <p className="text-xs text-zinc-500 mt-1">
+          <h3 className="text-base font-bold text-[#6F4E37]">No tables match filters</h3>
+          <p className="text-xs text-[#6F4E37]/60 mt-1 font-semibold">
             Try resetting your seat capacity or availability filters to find tables.
           </p>
           <button

@@ -8,6 +8,7 @@ import {
 import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { reportError } from "../lib/error-reporting";
+import { useStore } from "../lib/store";
 
 function NotFoundComponent() {
   return (
@@ -77,6 +78,14 @@ export const Route = createRootRouteWithContext()({
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const bootstrap = useStore((s) => s.bootstrap);
+  const authToken = useStore((s) => s.authToken);
+
+  useEffect(() => {
+    if (authToken) {
+      bootstrap();
+    }
+  }, [authToken, bootstrap]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -85,3 +94,4 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
+
