@@ -1,12 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { useStore } from "@/lib/store";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Coffee, Search, X } from "lucide-react";
-
-export const Route = createFileRoute("/kds")({ component: KDSPage });
 
 const STAGES = [
   { key: "all", label: "All" },
@@ -21,16 +19,27 @@ const NEXT = {
   Completed: null,
 };
 
-function KDSPage() {
+export default function KDSPage() {
   const tickets = useStore((s) => s.kds);
   const products = useStore((s) => s.products);
   const categories = useStore((s) => s.categories);
   const setStage = useStore((s) => s.setKdsStage);
   const toggleItem = useStore((s) => s.toggleKdsItem);
+  const fetchKds = useStore((s) => s.fetchKds);
   const [tab, setTab] = useState("all");
   const [q, setQ] = useState("");
   const [prodFilter, setProdFilter] = useState([]);
   const [catFilter, setCatFilter] = useState([]);
+
+  useEffect(() => {
+    fetchKds(); // Initial fetch
+
+    const interval = setInterval(() => {
+      fetchKds();
+    }, 5000); // Poll every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [fetchKds]);
 
   const counts = {
     all: tickets.length,

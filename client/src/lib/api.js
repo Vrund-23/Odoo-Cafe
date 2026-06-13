@@ -27,7 +27,7 @@ async function request(method, path, body) {
     if (res.status === 401) {
       clearToken();
       if (typeof window !== "undefined") {
-        window.location.href = "/auth";
+        window.location.href = "/";
       }
     }
     throw new Error(json.message || `API error ${res.status}`);
@@ -116,8 +116,9 @@ export const orderApi = {
 // ── Sessions ──────────────────────────────────────────────
 export const sessionApi = {
   getAll: () => request("GET", "/sessions"),
-  open: (data) => request("POST", "/sessions/open", data),
-  close: (id) => request("POST", `/sessions/${id}/close`),
+  getOpenSession: () => request("GET", "/sessions/my-open"),
+  open: (data) => request("POST", "/sessions", data),
+  close: (id, data) => request("PUT", `/sessions/${id}/close`, data),
 };
 
 // ── Kitchen ───────────────────────────────────────────────

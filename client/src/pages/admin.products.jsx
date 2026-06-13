@@ -1,7 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminShell } from "@/components/AdminShell";
-import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,19 +19,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, Pencil, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/admin/products")({ component: ProductsPage });
-
 const TAXES = [0, 5, 12, 18, 28];
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-function ProductsPage() {
-  const products = useStore((s) => s.products);
-  const categories = useStore((s) => s.categories);
-  const upsertProduct = useStore((s) => s.upsertProduct);
-  const deleteProduct = useStore((s) => s.deleteProduct);
-  const upsertCategory = useStore((s) => s.upsertCategory);
+function getAuthHeaders() {
+  const headers = { "Content-Type": "application/json" };
+  try {
+    const raw = localStorage.getItem("cafe-auth-token");
+    const token = raw ? raw.replace(/^"|"$/g, "") : null;
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  } catch (e) {}
+  return headers;
+}
+
+function normaliseProduct(p) {
+  return {
+    id: p.id,
+    name: p.name,
+    categoryId: p.categoryId,
+    price: Number(p.price),
+    unit: p.unitOfMeasure ?? "piece",
+    tax: Number(p.tax ?? 0),
+    description: p.description ?? "",
+    imageUrl: p.imageUrl ?? null,
+    sendToKitchen: p.showInKds ?? false,
+  };
+}
+
+export default function ProductsPage() {
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [q, setQ] = useState("");
   const [selected, setSelected] = useState([]);
@@ -42,11 +61,38 @@ function ProductsPage() {
   const [newCatName, setNewCatName] = useState("");
   const [catOpen, setCatOpen] = useState(false);
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      const [prodsRes, catsRes] = await Promise.all([
+        fetch(`${BASE_URL}/products`, { headers: getAuthHeaders() }),
+        fetch(`${BASE_URL}/categories`, { headers: getAuthHeaders() }),
+      ]);
+      
+      if (!prodsRes.ok || !catsRes.ok) throw new Error("Failed to fetch data");
+      
+      const prodsJson = await prodsRes.json();
+      const catsJson = await catsRes.json();
+      
+      const pData = prodsJson.data || prodsJson;
+      const cData = catsJson.data || catsJson;
+
+      setProducts(Array.isArray(pData) ? pData.map(normaliseProduct) : []);
+      setCategories(Array.isArray(cData) ? cData : []);
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filtered = products.filter((p) => !q || p.name.toLowerCase().includes(q.toLowerCase()));
 
   const startNew = () => {
     setEditing({
-      id: "p-" + Math.random().toString(36).slice(2),
       name: "",
       categoryId: categories[0]?.id ?? "",
       price: 0,
@@ -61,7 +107,34 @@ function ProductsPage() {
   const save = async () => {
     if (!editing?.name) return toast.error("Name required");
     try {
-      await upsertProduct(editing);
+      const payload = {
+        name: editing.name,
+        categoryId: editing.categoryId,
+        price: editing.price,
+        unitOfMeasure: editing.unit,
+        tax: editing.tax,
+        description: editing.description,
+        imageUrl: editing.imageUrl,
+        showInKds: editing.sendToKitchen,
+      };
+
+      const isNew = !editing.id;
+      const url = isNew ? `${BASE_URL}/products` : `${BASE_URL}/products/${editing.id}`;
+      const method = isNew ? "POST" : "PUT";
+
+      const res = await fetch(url, {
+        method,
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error("Failed to save product");
+      const json = await res.json();
+      const saved = normaliseProduct(json.data || json);
+
+      setProducts((prev) =>
+        isNew ? [...prev, saved] : prev.map((p) => (p.id === saved.id ? saved : p))
+      );
       setOpen(false);
       toast.success("Product saved successfully");
     } catch (err) {
@@ -69,13 +142,38 @@ function ProductsPage() {
     }
   };
 
+  const deleteProduct = async (id) => {
+    try {
+      const res = await fetch(`${BASE_URL}/products/${id}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to delete product");
+      
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+      setSelected((prev) => prev.filter((x) => x !== id));
+      toast.success("Product deleted successfully");
+    } catch (err) {
+      toast.error(err.message || "Failed to delete product");
+    }
+  };
+
   const createCat = async () => {
     if (!newCatName?.trim()) return;
-    const id = "c-" + Math.random().toString(36).slice(2, 6);
     const colors = ["#F59E0B", "#EC4899", "#10B981", "#3B82F6", "#8B5CF6"];
+    const color = colors[Math.floor(Math.random() * colors.length)];
     try {
-      await upsertCategory({ id, name: newCatName, color: colors[Math.floor(Math.random() * colors.length)] });
-      if (editing) setEditing({ ...editing, categoryId: id });
+      const res = await fetch(`${BASE_URL}/categories`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ name: newCatName, color }),
+      });
+      if (!res.ok) throw new Error("Failed to create category");
+      const json = await res.json();
+      const savedCat = json.data || json;
+
+      setCategories((prev) => [...prev, savedCat]);
+      if (editing) setEditing({ ...editing, categoryId: savedCat.id });
       setNewCatName("");
       setCatOpen(false);
       toast.success("Category created successfully");
@@ -99,7 +197,6 @@ function ProductsPage() {
             variant="destructive"
             onClick={() => {
               selected.forEach(deleteProduct);
-              setSelected([]);
             }}
             className="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/25 font-bold rounded-xl cursor-pointer"
           >
@@ -118,78 +215,89 @@ function ProductsPage() {
       </div>
 
       <Card className="bg-white border border-[#6F4E37]/25 rounded-3xl overflow-hidden shadow-md text-[#2B2118]">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-[#FAF3E0] border-b border-[#6F4E37]/20">
-              <tr>
-                <th className="p-3 w-10 text-center"></th>
-                <th className="p-3 text-left font-bold text-[#6F4E37]/80">Name</th>
-                <th className="p-3 text-left font-bold text-[#6F4E37]/80">Category</th>
-                <th className="p-3 text-right font-bold text-[#6F4E37]/80">Price</th>
-                <th className="p-3 text-right font-bold text-[#6F4E37]/80">Tax</th>
-                <th className="p-3 w-20 text-right"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => {
-                const c = categories.find((cat) => cat.id === p.categoryId);
-                return (
-                  <tr key={p.id} className="border-b border-[#6F4E37]/10 last:border-0 hover:bg-[#FAF3E0]/10 transition duration-150">
-                    <td className="p-3 text-center">
-                      <Checkbox
-                        checked={selected.includes(p.id)}
-                        onCheckedChange={(v) =>
-                          setSelected(v ? [...selected, p.id] : selected.filter((x) => x !== p.id))
-                        }
-                        className="border-[#6F4E37]/30 text-[#6F4E37] data-[state=checked]:bg-[#6F4E37]"
-                      />
-                    </td>
-                    <td className="p-3 font-semibold text-[#2B2118]">{p.name}</td>
-                    <td className="p-3">
-                      {c && (
-                        <span
-                          className="px-2 py-0.5 rounded-full text-xs font-bold text-white shadow-sm"
-                          style={{ background: c.color }}
-                        >
-                          {c.name}
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-3 text-right font-extrabold text-[#6F4E37]">₹{p.price}</td>
-                    <td className="p-3 text-right text-[#6F4E37]/80">{p.tax}%</td>
-                    <td className="p-3 text-right">
-                      <div className="flex gap-1 justify-end">
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          onClick={() => { setEditing(p); setOpen(true); }}
-                          className="hover:bg-[#6F4E37]/10 text-[#6F4E37]/60 hover:text-[#6F4E37] h-8 w-8 rounded-lg cursor-pointer"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          size="icon" 
-                          variant="ghost" 
-                          onClick={() => deleteProduct(p.id)}
-                          className="hover:bg-red-500/10 text-[#6F4E37]/60 hover:text-red-400 h-8 w-8 rounded-lg cursor-pointer"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </td>
+        {loading ? (
+          <div className="flex justify-center p-8 text-[#6F4E37]/60">
+            <Loader2 className="w-6 h-6 animate-spin" />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-[#FAF3E0] border-b border-[#6F4E37]/20">
+                <tr>
+                  <th className="p-3 w-10 text-center"></th>
+                  <th className="p-3 text-left font-bold text-[#6F4E37]/80">Name</th>
+                  <th className="p-3 text-left font-bold text-[#6F4E37]/80">Category</th>
+                  <th className="p-3 text-right font-bold text-[#6F4E37]/80">Price</th>
+                  <th className="p-3 text-right font-bold text-[#6F4E37]/80">Tax</th>
+                  <th className="p-3 w-20 text-right"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((p) => {
+                  const c = categories.find((cat) => cat.id === p.categoryId);
+                  return (
+                    <tr key={p.id} className="border-b border-[#6F4E37]/10 last:border-0 hover:bg-[#FAF3E0]/10 transition duration-150">
+                      <td className="p-3 text-center">
+                        <Checkbox
+                          checked={selected.includes(p.id)}
+                          onCheckedChange={(v) =>
+                            setSelected(v ? [...selected, p.id] : selected.filter((x) => x !== p.id))
+                          }
+                          className="border-[#6F4E37]/30 text-[#6F4E37] data-[state=checked]:bg-[#6F4E37]"
+                        />
+                      </td>
+                      <td className="p-3 font-semibold text-[#2B2118]">{p.name}</td>
+                      <td className="p-3">
+                        {c && (
+                          <span
+                            className="px-2 py-0.5 rounded-full text-xs font-bold text-white shadow-sm"
+                            style={{ background: c.color }}
+                          >
+                            {c.name}
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3 text-right font-extrabold text-[#6F4E37]">₹{p.price}</td>
+                      <td className="p-3 text-right text-[#6F4E37]/80">{p.tax}%</td>
+                      <td className="p-3 text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            onClick={() => { setEditing(p); setOpen(true); }}
+                            className="hover:bg-[#6F4E37]/10 text-[#6F4E37]/60 hover:text-[#6F4E37] h-8 w-8 rounded-lg cursor-pointer"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            onClick={() => deleteProduct(p.id)}
+                            className="hover:bg-red-500/10 text-[#6F4E37]/60 hover:text-red-400 h-8 w-8 rounded-lg cursor-pointer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-4 text-center text-[#6F4E37]/60">No products found.</td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#2B2118] max-w-lg rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-[#6F4E37] font-extrabold text-lg">
-              {products.find((p) => p.id === editing?.id) ? "Edit" : "New"} Product
+              {editing?.id ? "Edit" : "New"} Product
             </DialogTitle>
           </DialogHeader>
           {editing && (

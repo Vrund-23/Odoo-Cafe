@@ -2,6 +2,8 @@ import * as orderService from '../services/order.service.js';
 import * as kitchenService from '../services/kitchen.service.js';
 import * as productService from '../services/product.service.js';
 import { successResponse, errorResponse, paginatedResponse } from '../utils/response.util.js';
+import { sendReceiptEmail } from '../services/email.service.js';
+import prisma from '../config/database.js';
 
 export const createOrder = async (req, res) => {
   try {
@@ -87,5 +89,64 @@ export const applyDiscount = async (req, res) => {
     return successResponse(res, order, 'Discount applied successfully');
   } catch (error) {
     return errorResponse(res, error.message, 400, error);
+  }
+};
+
+export const sendReceipt = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email } = req.body; // optional override email
+
+    // Fetch full order with all relations
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        customer: true,
+        table: true,
+        orderItems: {
+          include: {
+            product: { select: { id: true, name: true, price: true } },
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return errorResponse(res, 'Order not found', 404);
+    }
+
+    const toEmail = email || order.customer?.email;
+    if (!toEmail) {
+      return errorResponse(res, 'No email address available for this customer', 400);
+    }
+
+    const items = order.orderItems.map((oi) => ({
+      name: oi.product?.name || 'Item',
+      qty: Number(oi.quantity),
+      unitPrice: Number(oi.unitPrice),
+    }));
+
+    const tableNumber = order.table?.tableNumber
+      ? order.table.tableNumber.replace(/\D/g, '') || order.table.tableNumber
+      : null;
+
+    await sendReceiptEmail({
+      to: toEmail,
+      customerName: order.customer?.name || 'Customer',
+      orderNumber: order.orderNumber,
+      tableNumber,
+      items,
+      subtotal: Number(order.subtotal),
+      tax: Number(order.taxAmount),
+      discount: Number(order.discountAmount),
+      total: Number(order.total),
+      paymentMethod: order.paymentMethod || 'Cash',
+      paidAt: order.updatedAt,
+    });
+
+    return successResponse(res, { sent: true, to: toEmail }, 'Receipt sent successfully');
+  } catch (error) {
+    console.error('sendReceipt error:', error);
+    return errorResponse(res, error.message || 'Failed to send receipt', 500, error);
   }
 };

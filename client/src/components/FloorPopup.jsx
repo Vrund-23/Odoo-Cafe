@@ -24,7 +24,10 @@ export function FloorPopup({ open, onSelect, onOpenChange }) {
                 {tables
                   .filter((t) => t.floorId === f.id && t.active)
                   .map((t) => {
-                    const busy = hasOrder(t.id);
+                    const activeOrder = orders.find((o) => o.tableId === t.id && o.status === "Draft");
+                    const busy = !!activeOrder;
+                    const customer = busy ? useStore.getState().customers.find(c => c.id === activeOrder.customerId) : null;
+                    
                     return (
                       <button
                         key={t.id}
@@ -41,7 +44,10 @@ export function FloorPopup({ open, onSelect, onOpenChange }) {
                           {t.seats}
                         </span>
                         {busy ? (
-                          <span className="text-[9px] text-[#6F4E37] font-extrabold uppercase tracking-wider mt-1">Occupied</span>
+                          <div className="flex flex-col items-center mt-1">
+                            <span className="text-[9px] text-[#6F4E37] font-extrabold uppercase tracking-wider">Occupied</span>
+                            {customer && <span className="text-[10px] text-[#2B2118] font-bold truncate max-w-[70px] leading-tight">{customer.name.split(' ')[0]}</span>}
+                          </div>
                         ) : (
                           <span className="text-[9px] text-[#6B8E6E] font-extrabold uppercase tracking-wider mt-1">Available</span>
                         )}

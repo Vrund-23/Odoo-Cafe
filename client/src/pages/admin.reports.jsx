@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AdminShell } from "@/components/AdminShell";
 import { useStore } from "@/lib/store";
@@ -20,9 +19,7 @@ import {
 import { format, startOfDay, startOfWeek, startOfMonth } from "date-fns";
 import { Download } from "lucide-react";
 
-export const Route = createFileRoute("/admin/reports")({ component: ReportsPage });
-
-function ReportsPage() {
+export default function ReportsPage() {
   const orders = useStore((s) => s.orders);
   const products = useStore((s) => s.products);
   const categories = useStore((s) => s.categories);

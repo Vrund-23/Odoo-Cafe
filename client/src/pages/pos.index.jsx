@@ -1,7 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { FloorPopup } from "@/components/FloorPopup";
+import { CustomerCaptureModal } from "@/components/CustomerCaptureModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -29,9 +30,7 @@ import {
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 
-export const Route = createFileRoute("/pos/")({ component: OrderView });
-
-function OrderView() {
+export default function OrderView() {
   const {
     categories,
     products,
@@ -88,12 +87,8 @@ function OrderView() {
       } else {
         setSelectedLineProductId(null);
       }
-    } else if (!draftOrderId || orders.find((o) => o.id === draftOrderId)?.status !== "Draft") {
-      const newId = createDraftOrder(currentTableId);
-      setDraftOrder(newId);
-      setSelectedLineProductId(null);
     }
-  }, [currentTableId]);
+  }, [currentTableId, orders]);
 
   const order = orders.find((o) => o.id === draftOrderId);
   const customer = customers.find((c) => c.id === order?.customerId);
@@ -117,9 +112,27 @@ function OrderView() {
     return list;
   }, [products, activeCat, search]);
 
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const [pendingTable, setPendingTable] = useState(null);
+
   const handleSelectTable = (tid) => {
-    setCurrentTable(tid);
-    setShowFloor(false);
+    const isOccupied = useStore.getState().orders.some(o => o.tableId === tid && o.status === "Draft");
+    if (!isOccupied) {
+      setPendingTable(tid);
+      setCaptureOpen(true);
+      setShowFloor(false);
+    } else {
+      setCurrentTable(tid);
+      setShowFloor(false);
+    }
+  };
+
+  const handleCustomerCaptured = (customerId) => {
+    setCaptureOpen(false);
+    const newId = createDraftOrder(pendingTable, customerId);
+    setDraftOrder(newId);
+    setCurrentTable(pendingTable);
+    setSelectedLineProductId(null);
   };
 
   const handleAdd = (pid) => {
@@ -165,6 +178,8 @@ function OrderView() {
     setSelectedPM(null);
     setCashReceived("");
     setCardRef("");
+    setCurrentTable(null);
+    setDraftOrder(null);
     setShowFloor(true);
   };
 
@@ -263,6 +278,7 @@ function OrderView() {
     return (
       <div className="h-[calc(100vh-4rem)] bg-[#FAF3E0] text-[#2B2118] flex flex-col justify-center items-center select-none">
         <FloorPopup open={showFloor} onSelect={handleSelectTable} onOpenChange={setShowFloor} />
+        <CustomerCaptureModal open={captureOpen} onOpenChange={setCaptureOpen} tableId={pendingTable} onSuccess={handleCustomerCaptured} />
         <Coffee className="w-16 h-16 text-[#6F4E37] mb-4 animate-bounce" />
         <h2 className="text-xl font-extrabold mb-2">Welcome to Odoo Cafe POS</h2>
         <p className="text-sm text-[#6F4E37]/60 mb-6">Select a dining table to launch a sales session.</p>
@@ -279,6 +295,7 @@ function OrderView() {
   return (
     <div className="grid grid-cols-12 gap-3.5 p-3.5 h-[calc(100vh-4rem)] bg-[#FAF3E0] text-[#2B2118] overflow-hidden select-none">
       <FloorPopup open={showFloor} onSelect={handleSelectTable} onOpenChange={setShowFloor} />
+      <CustomerCaptureModal open={captureOpen} onOpenChange={setCaptureOpen} tableId={pendingTable} onSuccess={handleCustomerCaptured} />
 
       {/* COLUMN 1: PRODUCT SELECTION & SIDEBAR */}
       <div className="col-span-6 flex overflow-hidden border border-[#6F4E37]/20 bg-white rounded-3xl shadow-md p-3">
@@ -467,13 +484,17 @@ function OrderView() {
             </span>
           ) : (
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (order.lines.length === 0) {
                   toast.error("Cart is empty");
                   return;
                 }
-                sendOrderToKitchen(order.id);
-                toast.success("Order sent to kitchen successfully!");
+                try {
+                  await sendOrderToKitchen(order.id);
+                  toast.success("Order sent to kitchen successfully!");
+                } catch (err) {
+                  toast.error(err.message || "Failed to send order to kitchen");
+                }
               }}
               className="bg-[#6F4E37]/10 text-[#6F4E37] hover:bg-[#6F4E37] hover:text-white border border-[#6F4E37]/25 text-xs font-extrabold px-3 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer w-full"
             >
@@ -638,6 +659,13 @@ function OrderView() {
                     New Order
                   </button>
                 </div>
+                {/* Send Receipt by Email */}
+                <button
+                  onClick={() => setEmailOpen(true)}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Mail className="w-3.5 h-3.5" /> Email Receipt to Customer
+                </button>
               </div>
             )}
           </div>
@@ -768,34 +796,64 @@ function OrderView() {
         </DialogContent>
       </Dialog>
 
-      {/* Email dialog */}
+      {/* Email Receipt dialog */}
       <Dialog open={emailOpen} onOpenChange={setEmailOpen}>
         <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#2B2118] max-w-sm rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-[#6F4E37] font-bold">Send Receipt via Email</DialogTitle>
+            <DialogTitle className="text-[#6F4E37] font-bold">Email Receipt to Customer</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 py-2.5">
             <Label className="text-xs text-[#6F4E37]/60">Email Address</Label>
             <Input
               type="email"
+              autoFocus
               placeholder="customer@example.com"
               value={emailVal || customer?.email || ""}
               onChange={(e) => setEmailVal(e.target.value)}
               className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/30 rounded-xl"
             />
+            {customer?.email && !emailVal && (
+              <p className="text-[10px] text-[#6F4E37]/60 font-medium">
+                Pre-filled from customer profile
+              </p>
+            )}
           </div>
           <DialogFooter className="flex gap-2">
             <Button variant="outline" onClick={() => setEmailOpen(false)} className="border-[#6F4E37]/20 text-[#6F4E37]/60 hover:bg-[#FAF3E0] flex-1 cursor-pointer">
               Cancel
             </Button>
             <Button
-              onClick={() => {
-                toast.success("Receipt sent successfully");
-                setEmailOpen(false);
+              onClick={async () => {
+                const toEmail = emailVal || customer?.email;
+                if (!toEmail) return toast.error("Enter a valid email address");
+                if (!order?.id || order.id.length <= 15) {
+                  toast.error("Order must be sent to kitchen first before emailing receipt");
+                  return;
+                }
+                try {
+                  const BASE = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+                  const raw = localStorage.getItem("cafe-auth-token");
+                  const token = raw ? raw.replace(/^"|"$/g, "") : null;
+                  const res = await fetch(`${BASE}/orders/${order.id}/send-receipt`, {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                    body: JSON.stringify({ email: toEmail }),
+                  });
+                  const json = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error(json.message || "Failed to send receipt");
+                  toast.success(`Receipt sent to ${toEmail}`);
+                  setEmailOpen(false);
+                  setEmailVal("");
+                } catch (err) {
+                  toast.error(err.message || "Failed to send receipt");
+                }
               }}
-              className="bg-[#6F4E37] hover:bg-[#6F4E37]/90 text-white flex-1 font-bold cursor-pointer"
+              className="bg-blue-600 hover:bg-blue-700 text-white flex-1 font-bold cursor-pointer"
             >
-              Send
+              <Mail className="w-3.5 h-3.5 mr-1.5" /> Send
             </Button>
           </DialogFooter>
         </DialogContent>

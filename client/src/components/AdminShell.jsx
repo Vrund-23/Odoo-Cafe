@@ -1,4 +1,4 @@
-import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useStore } from "@/lib/store";
 import { Coffee, Package, Tags, CreditCard, Ticket, BookOpen, UserCog, Monitor, BarChart3, LogOut, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,7 @@ const items = [
 ];
 
 export function AdminShell({ children, title }) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { pathname } = useLocation();
   const navigate = useNavigate();
   const logout = useStore((s) => s.logout);
 
@@ -68,7 +68,7 @@ export function AdminShell({ children, title }) {
             variant="ghost"
             size="sm"
             className="w-full justify-start text-[#6F4E37] hover:bg-[#FAF3E0] hover:text-[#6F4E37] font-semibold"
-            onClick={() => navigate({ to: "/pos" })}
+            onClick={() => navigate("/pos")}
           >
             <ArrowLeft className="w-4 h-4 mr-1.5" /> Back to POS
           </Button>
@@ -78,7 +78,7 @@ export function AdminShell({ children, title }) {
             className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50 font-semibold"
             onClick={() => {
               logout();
-              navigate({ to: "/auth" });
+              navigate("/");
             }}
           >
             <LogOut className="w-4 h-4 mr-1.5" /> Log Out

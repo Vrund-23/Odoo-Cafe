@@ -158,6 +158,30 @@ export const useStore = create(
             bootstrapped: true,
             loading: false,
           });
+
+          // Ensure we have a valid active backend session synced on startup
+          if (get().authToken) {
+            try {
+              const activeSess = await sessionApi.getOpenSession();
+              if (activeSess && activeSess.id) {
+                if (get().currentSessionId !== activeSess.id) {
+                  set({ currentSessionId: activeSess.id });
+                }
+              } else {
+                // No open session on backend, let's open one
+                await get().openSession();
+              }
+            } catch (err) {
+              console.error("Session sync failed:", err);
+              if (!get().currentSessionId) {
+                const s = { id: uid(), openedAt: Date.now(), openingAmount: 0, employeeId: get().currentUserId };
+                set((st) => ({ sessions: [...st.sessions, s], currentSessionId: s.id }));
+              }
+            }
+          }
+
+          // Fetch fresh KDS state on startup
+          await get().fetchKds().catch((err) => console.error("KDS bootstrap fetch failed:", err));
         } catch (e) {
           console.error("Bootstrap error:", e);
           set({ loading: false });
@@ -195,80 +219,11 @@ export const useStore = create(
       },
 
       // ── Categories ─────────────────────────────────────────
-      upsertCategory: async (c) => {
-        try {
-          const saved = c.id && !c.id.startsWith("c-")
-            ? await categoryApi.update(c.id, c)
-            : await categoryApi.create(c);
-          set((s) => ({
-            categories: s.categories.some((x) => x.id === saved.id)
-              ? s.categories.map((x) => (x.id === saved.id ? saved : x))
-              : [...s.categories, saved],
-          }));
-        } catch (e) {
-          console.error(e);
-          throw e;
-        }
-      },
-      deleteCategory: async (id) => {
-        try {
-          await categoryApi.delete(id);
-          set((s) => ({ categories: s.categories.filter((x) => x.id !== id) }));
-        } catch (e) { console.error(e); }
-      },
 
-      // ── Products ───────────────────────────────────────────
-      upsertProduct: async (p) => {
-        try {
-          const payload = {
-            name: p.name,
-            categoryId: p.categoryId,
-            price: p.price,
-            unitOfMeasure: p.unit,
-            tax: p.tax,
-            description: p.description,
-            imageUrl: p.imageUrl,
-            showInKds: p.sendToKitchen,
-          };
-          const saved = p.id && !p.id.startsWith("p-")
-            ? await productApi.update(p.id, payload)
-            : await productApi.create(payload);
-          const norm = normaliseProduct(saved);
-          set((s) => ({
-            products: s.products.some((x) => x.id === norm.id)
-              ? s.products.map((x) => (x.id === norm.id ? norm : x))
-              : [...s.products, norm],
-          }));
-        } catch (e) {
-          console.error(e);
-          throw e;
-        }
-      },
-      deleteProduct: async (id) => {
-        try {
-          await productApi.delete(id);
-          set((s) => ({ products: s.products.filter((x) => x.id !== id) }));
-        } catch (e) { console.error(e); }
-      },
 
-      // ── Payment Methods ────────────────────────────────────
-      upsertPaymentMethod: async (p) => {
-        try {
-          const saved = p.id ? await paymentApi.update(p.id, p) : await paymentApi.create(p);
-          const norm = normalisePayment(saved);
-          set((s) => ({
-            paymentMethods: s.paymentMethods.some((x) => x.id === norm.id)
-              ? s.paymentMethods.map((x) => (x.id === norm.id ? norm : x))
-              : [...s.paymentMethods, norm],
-          }));
-        } catch (e) { console.error(e); }
-      },
-      deletePaymentMethod: async (id) => {
-        try {
-          await paymentApi.delete(id);
-          set((s) => ({ paymentMethods: s.paymentMethods.filter((x) => x.id !== id) }));
-        } catch (e) { console.error(e); }
-      },
+
+
+
 
       // ── Floors ─────────────────────────────────────────────
       upsertFloor: async (f) => {
@@ -316,98 +271,11 @@ export const useStore = create(
         } catch (e) { console.error(e); }
       },
 
-      // ── Coupons ────────────────────────────────────────────
-      upsertCoupon: async (c) => {
-        try {
-          // Map UI fields → DB fields
-          const discountType = c.discountKind === "percent" ? "PERCENTAGE" : "FIXED";
-          const isPromotion = c.type === "Promotion";
-          const payload = {
-            name: c.name,
-            code: c.code || undefined,
-            discountType,
-            discountValue: c.discountValue,
-            isActive: c.active,
-            ...(isPromotion && {
-              promotionType: c.apply === "Product" ? "PRODUCT" : "ORDER",
-              productId: c.productId || null,
-              minQuantity: c.minQty ?? null,
-              minOrderAmount: c.minOrderAmount ?? null,
-            }),
-          };
-          const isNew = !c.id || c.id.startsWith("co-");
-          const saved = isNew
-            ? await couponApi.create(payload)
-            : await couponApi.update(c.id, payload);
-          const norm = normaliseCoupon(saved);
-          set((s) => ({
-            coupons: isNew
-              ? [...s.coupons.filter((x) => x.id !== c.id), norm]
-              : s.coupons.map((x) => (x.id === norm.id ? norm : x)),
-          }));
-        } catch (e) {
-          console.error("upsertCoupon error:", e);
-          throw e;
-        }
-      },
-      deleteCoupon: async (id) => {
-        try {
-          await couponApi.delete(id);
-          set((s) => ({ coupons: s.coupons.filter((x) => x.id !== id) }));
-        } catch (e) { console.error(e); }
-      },
 
-      // ── Customers ──────────────────────────────────────────
-      upsertCustomer: async (c) => {
-        try {
-          const saved = c.id ? await customerApi.update(c.id, c) : await customerApi.create(c);
-          set((s) => ({
-            customers: s.customers.some((x) => x.id === saved.id)
-              ? s.customers.map((x) => (x.id === saved.id ? saved : x))
-              : [...s.customers, saved],
-          }));
-        } catch (e) { console.error(e); }
-      },
-      deleteCustomer: async (id) => {
-        try {
-          await customerApi.delete(id);
-          set((s) => ({ customers: s.customers.filter((x) => x.id !== id) }));
-        } catch (e) { console.error(e); }
-      },
 
-      // ── Users ──────────────────────────────────────────────
-      upsertUser: async (u) => {
-        try {
-          const saved = u.id ? await authApi.updateUser(u.id, u) : await authApi.register(u);
-          const norm = normaliseUser(saved.user ?? saved);
-          set((s) => ({
-            users: s.users.some((x) => x.id === norm.id)
-              ? s.users.map((x) => (x.id === norm.id ? norm : x))
-              : [...s.users, norm],
-          }));
-        } catch (e) { console.error(e); }
-      },
-      deleteUser: async (id) => {
-        try {
-          await authApi.deleteUser(id);
-          set((s) => ({ users: s.users.filter((x) => x.id !== id) }));
-        } catch (e) { console.error(e); }
-      },
-      archiveUser: async (id) => {
-        try {
-          const u = get().users.find((x) => x.id === id);
-          if (!u) return;
-          await authApi.updateUser(id, { isArchived: u.active });
-          set((s) => ({
-            users: s.users.map((x) => (x.id === id ? { ...x, active: !x.active } : x)),
-          }));
-        } catch (e) { console.error(e); }
-      },
-      changePassword: async (id, pwd) => {
-        try {
-          await authApi.updateUser(id, { password: pwd });
-        } catch (e) { console.error(e); }
-      },
+
+
+
 
       // ── Sessions ───────────────────────────────────────────
       openSession: async () => {
@@ -433,7 +301,7 @@ export const useStore = create(
           .orders.filter((o) => o.sessionId === sid && o.status === "Paid")
           .reduce((s, o) => s + o.total, 0);
         try {
-          await sessionApi.close(sid);
+          await sessionApi.close(sid, { closingAmount: total });
         } catch { /* best effort */ }
         set((s) => ({
           sessions: s.sessions.map((x) =>
@@ -448,11 +316,11 @@ export const useStore = create(
       setCurrentTable: (id) => set({ currentTableId: id }),
 
       // ── Orders (local for now, sync on pay) ───────────────
-      createDraftOrder: (tableId) => {
+      createDraftOrder: (tableId, customerId = null) => {
         const id = uid();
         const number = pad(get().orders.length + 1);
         const o = {
-          id, number, tableId,
+          id, number, tableId, customerId,
           lines: [], subtotal: 0, tax: 0,
           discountTotal: 0, total: 0,
           status: "Draft",
@@ -559,55 +427,63 @@ export const useStore = create(
         const o = s.orders.find((x) => x.id === orderId);
         if (!o || !o.lines.length) return;
 
-        // Send ALL items to the KDS (kitchen staff sees everything)
-        const items = o.lines.map((l) => ({
-          productId: l.productId,
-          qty: l.qty,
-          done: false,
-        }));
+        let sessionId = get().currentSessionId;
+        if (!sessionId) {
+          throw new Error("No active session. Please log out and log in again.");
+        }
 
-        // Always write to local KDS immediately (optimistic update)
-        const prevKds = get().kds.filter((k) => k.orderId !== orderId);
-        const localTicket = {
-          id: uid(),
-          orderId,
-          orderNumber: o.number,
-          items,
-          stage: "ToCook",
-          createdAt: Date.now(),
-        };
-        set({ kds: [localTicket, ...prevKds] });
-        get().updateOrder(orderId, { sentToKitchen: true });
-
-        // Then try to persist to DB in the background
         try {
-          const sessionId = o.sessionId ?? get().currentSessionId;
-          if (!sessionId) throw new Error("No active session");
+          let savedOrder;
+          try {
+            savedOrder = await orderApi.create({
+              sessionId,
+              tableId: o.tableId,
+              employeeId: o.employeeId ?? get().currentUserId,
+              items: o.lines.map((l) => ({ productId: l.productId, quantity: l.qty, unitPrice: l.unitPrice })),
+            });
+          } catch (firstErr) {
+            // Self-healing session recovery: if backend throws session error, fetch/create session and retry
+            if (firstErr.message?.toLowerCase().includes("session")) {
+              console.warn("Session error during order creation, attempting session recovery...");
+              const activeSess = await sessionApi.getOpenSession().catch(() => null);
+              let newSessionId = activeSess?.id;
+              if (!newSessionId) {
+                const sess = await sessionApi.open({ userId: get().currentUserId }).catch(() => null);
+                newSessionId = sess?.id;
+              }
+              if (newSessionId) {
+                sessionId = newSessionId;
+                set({ currentSessionId: newSessionId });
+                // Retry creating the order
+                savedOrder = await orderApi.create({
+                  sessionId: newSessionId,
+                  tableId: o.tableId,
+                  employeeId: o.employeeId ?? get().currentUserId,
+                  items: o.lines.map((l) => ({ productId: l.productId, quantity: l.qty, unitPrice: l.unitPrice })),
+                });
+              } else {
+                throw firstErr;
+              }
+            } else {
+              throw firstErr;
+            }
+          }
 
-          const savedOrder = await orderApi.create({
-            sessionId,
-            tableId: o.tableId,
-            employeeId: o.employeeId ?? get().currentUserId,
-            items: o.lines.map((l) => ({ productId: l.productId, quantity: l.qty, unitPrice: l.unitPrice })),
-          });
-
-          // Replace local draft ID with the real DB ID everywhere
+          // Replace local draft ID with the real DB ID everywhere and set sentToKitchen
           set((state) => ({
             orders: state.orders.map((ord) =>
               ord.id === orderId
-                ? { ...ord, id: savedOrder.id, number: savedOrder.orderNumber, sentToKitchen: true }
+                ? { ...ord, id: savedOrder.id, number: savedOrder.orderNumber, sessionId, sentToKitchen: true }
                 : ord
             ),
             draftOrderId: state.draftOrderId === orderId ? savedOrder.id : state.draftOrderId,
-            // Also update the KDS ticket orderId/orderNumber
-            kds: state.kds.map((k) =>
-              k.orderId === orderId
-                ? { ...k, orderId: savedOrder.id, orderNumber: savedOrder.orderNumber }
-                : k
-            ),
           }));
+
+          // Fetch fresh state from KDS backend
+          await get().fetchKds();
         } catch (err) {
-          console.error("sendOrderToKitchen DB sync failed (local KDS still active):", err);
+          console.error("sendOrderToKitchen failed:", err);
+          throw new Error(err.message || "Failed to create order on server");
         }
       },
 
@@ -616,7 +492,6 @@ export const useStore = create(
         if (!o) return;
         // Mark paid locally immediately
         get().updateOrder(orderId, { status: "Paid", paymentMethodId, amountPaid, paymentRef: ref });
-        set({ draftOrderId: null, currentTableId: null });
         try {
           const isDbOrder = orderId.length > 15; // UUID is 36 chars, local uid() is 8 chars
           if (isDbOrder) {
@@ -639,16 +514,119 @@ export const useStore = create(
         }
       },
 
-      setKdsStage: (ticketId, stage) =>
-        set((s) => ({ kds: s.kds.map((k) => (k.id === ticketId ? { ...k, stage } : k)) })),
-      toggleKdsItem: (ticketId, productId) =>
+      fetchKds: async () => {
+        try {
+          const orders = await kitchenApi.getAll();
+          const groups = {};
+
+          for (const item of orders) {
+            if (!groups[item.orderId]) {
+              groups[item.orderId] = {
+                id: item.orderId,
+                orderId: item.orderId,
+                orderNumber: item.order?.orderNumber || '',
+                items: [],
+                stage: 'ToCook',
+                createdAt: new Date(item.createdAt).getTime(),
+                rawItems: [],
+              };
+            }
+            groups[item.orderId].items.push({
+              kitchenOrderId: item.id,
+              productId: item.productId,
+              qty: Number(item.orderItem?.quantity || 1),
+              done: item.isItemCompleted || item.status === 'COMPLETED',
+            });
+            groups[item.orderId].rawItems.push(item);
+          }
+
+          const ticketList = Object.values(groups).map((group) => {
+            const statuses = group.rawItems.map((i) => i.status);
+            let stage = 'ToCook';
+            if (statuses.every((s) => s === 'COMPLETED')) {
+              stage = 'Completed';
+            } else if (statuses.some((s) => s === 'PREPARING' || s === 'COMPLETED')) {
+              stage = 'Preparing';
+            } else {
+              stage = 'ToCook';
+            }
+            group.stage = stage;
+            delete group.rawItems;
+            return group;
+          });
+
+          ticketList.sort((a, b) => a.createdAt - b.createdAt);
+          set({ kds: ticketList });
+        } catch (e) {
+          console.error("fetchKds error:", e);
+        }
+      },
+
+      setKdsStage: async (ticketId, stage) => {
+        const ticket = get().kds.find((k) => k.id === ticketId);
+        if (!ticket) return;
+
+        // Optimistically update local stage
+        set((s) => ({
+          kds: s.kds.map((k) => (k.id === ticketId ? { ...k, stage } : k)),
+        }));
+
+        try {
+          const mapStageToDbStatus = (stg) => {
+            if (stg === 'ToCook') return 'TO_COOK';
+            if (stg === 'Preparing') return 'PREPARING';
+            if (stg === 'Completed') return 'COMPLETED';
+            return 'TO_COOK';
+          };
+          const dbStatus = mapStageToDbStatus(stage);
+          // For all items in the ticket, update their status on the backend sequentially
+          for (const item of ticket.items) {
+            await kitchenApi.updateStatus(item.kitchenOrderId, dbStatus);
+          }
+          await get().fetchKds();
+        } catch (err) {
+          console.error("setKdsStage failed:", err);
+        }
+      },
+
+      toggleKdsItem: async (ticketId, productId) => {
+        const ticket = get().kds.find((k) => k.id === ticketId);
+        if (!ticket) return;
+        const item = ticket.items.find((i) => i.productId === productId);
+        if (!item) return;
+
+        const nextDone = !item.done;
+
+        // Optimistically update local item state
         set((s) => ({
           kds: s.kds.map((k) =>
             k.id === ticketId
-              ? { ...k, items: k.items.map((i) => (i.productId === productId ? { ...i, done: !i.done } : i)) }
+              ? { ...k, items: k.items.map((i) => (i.productId === productId ? { ...i, done: nextDone } : i)) }
               : k
           ),
-        })),
+        }));
+
+        try {
+          if (nextDone) {
+            await kitchenApi.complete(item.kitchenOrderId);
+          } else {
+            const mapStageToDbStatus = (stg) => {
+              if (stg === 'ToCook') return 'TO_COOK';
+              if (stg === 'Preparing') return 'PREPARING';
+              if (stg === 'Completed') return 'COMPLETED';
+              return 'TO_COOK';
+            };
+            const dbStatus = mapStageToDbStatus(ticket.stage);
+            await kitchenApi.updateStatus(
+              item.kitchenOrderId,
+              dbStatus === 'COMPLETED' ? 'PREPARING' : dbStatus
+            );
+          }
+          await get().fetchKds();
+        } catch (err) {
+          console.error("toggleKdsItem failed:", err);
+        }
+      },
     }),
     {
       name: "cafe-pos-v2",  // bumped version — clears old incompatible cache

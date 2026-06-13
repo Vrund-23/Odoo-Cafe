@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { AdminShell } from "@/components/AdminShell";
 import { useStore } from "@/lib/store";
@@ -8,9 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2 } from "lucide-react";
 
-export const Route = createFileRoute("/admin/booking")({ component: BookingPage });
-
-function BookingPage() {
+export default function BookingPage() {
   const floors = useStore((s) => s.floors);
   const tables = useStore((s) => s.tables);
   const upsertFloor = useStore((s) => s.upsertFloor);

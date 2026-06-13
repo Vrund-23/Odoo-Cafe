@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Input } from "@/components/ui/input";
@@ -15,9 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Search, Trash2, Edit } from "lucide-react";
 
-export const Route = createFileRoute("/pos/orders")({ component: OrdersPage });
-
-function OrdersPage() {
+export default function OrdersPage() {
   const orders = useStore((s) => s.orders);
   const customers = useStore((s) => s.customers);
   const products = useStore((s) => s.products);
@@ -46,7 +44,7 @@ function OrdersPage() {
     if (!o) return;
     setDraftOrder(id);
     if (o.tableId) setCurrentTable(o.tableId);
-    navigate({ to: "/pos" });
+    navigate("/pos");
   };
 
   return (
@@ -71,6 +69,7 @@ function OrdersPage() {
               <tr>
                 <th className="p-3 text-left font-bold text-[#6F4E37]/80">Date</th>
                 <th className="p-3 text-left font-bold text-[#6F4E37]/80">Order</th>
+                <th className="p-3 text-left font-bold text-[#6F4E37]/80">Table</th>
                 <th className="p-3 text-left font-bold text-[#6F4E37]/80">Customer</th>
                 <th className="p-3 text-right font-bold text-[#6F4E37]/80">Amount</th>
                 <th className="p-3 text-left font-bold text-[#6F4E37]/80">Status</th>
@@ -79,6 +78,7 @@ function OrdersPage() {
             <tbody>
               {filtered.map((o) => {
                 const c = customers.find((x) => x.id === o.customerId);
+                const t = useStore.getState().tables.find((x) => x.id === o.tableId);
                 return (
                   <tr
                     key={o.id}
@@ -86,7 +86,8 @@ function OrdersPage() {
                     onClick={() => setSelected(o.id)}
                   >
                     <td className="p-3 text-[#6F4E37]/80">{format(new Date(o.createdAt), "M/d HH:mm")}</td>
-                    <td className="p-3 font-mono font-bold text-[#6F4E37]">#{o.number}</td>
+                    <td className="p-3 font-mono font-bold text-[#6F4E37]">#{o.number || o.id.slice(0,6)}</td>
+                    <td className="p-3 font-bold text-[#6F4E37]">{t ? `T-${t.number}` : "-"}</td>
                     <td className="p-3 text-[#2B2118] font-[#2B2118] font-semibold">{c?.name ?? "-"}</td>
                     <td className="p-3 text-right font-extrabold text-[#6F4E37]">₹{o.total.toFixed(2)}</td>
                     <td className="p-3">

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Eye, EyeOff, Coffee, Shield, User } from "lucide-react";
 
-export const Route = createFileRoute("/auth")({ component: AuthPage });
-
-function AuthPage() {
+export default function AuthPage() {
   const [selectedRole, setSelectedRole] = useState("admin");
   const [email, setEmail] = useState("admin@cafe.com");
   const [password, setPassword] = useState("admin");
@@ -18,7 +16,15 @@ function AuthPage() {
   const [isLoading, setIsLoading] = useState(false);
   const login = useStore((s) => s.login);
   const openSession = useStore((s) => s.openSession);
+  const currentUserId = useStore((s) => s.currentUserId);
   const navigate = useNavigate();
+
+  // Redirect to /pos if already logged in
+  useEffect(() => {
+    if (currentUserId) {
+      navigate("/pos");
+    }
+  }, [currentUserId, navigate]);
 
   // Set page title for SEO
   useEffect(() => {
@@ -48,7 +54,7 @@ function AuthPage() {
       }
       await openSession();
       toast.success(`Welcome back, ${user.name}!`);
-      navigate({ to: "/pos" });
+      navigate("/pos");
     } catch {
       toast.error("Login failed. Check your credentials.");
     } finally {

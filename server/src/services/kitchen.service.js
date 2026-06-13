@@ -15,6 +15,9 @@ export const createKitchenOrder = async (orderId, orderItemId, productId) => {
       order: {
         select: { id: true, orderNumber: true, tableId: true },
       },
+      orderItem: {
+        select: { quantity: true },
+      },
     },
   });
 
@@ -36,6 +39,9 @@ export const getAllKitchenOrders = async (status = null) => {
       assignedTo: {
         select: { id: true, name: true },
       },
+      orderItem: {
+        select: { quantity: true },
+      },
     },
     orderBy: { createdAt: 'asc' },
   });
@@ -53,6 +59,9 @@ export const getKitchenOrdersByOrder = async (orderId) => {
       assignedTo: {
         select: { id: true, name: true },
       },
+      orderItem: {
+        select: { quantity: true },
+      },
     },
   });
 
@@ -69,6 +78,9 @@ export const updateKitchenOrderStatus = async (id, status) => {
       },
       order: {
         select: { id: true, orderNumber: true },
+      },
+      orderItem: {
+        select: { quantity: true },
       },
     },
   });
@@ -107,8 +119,12 @@ export const completeKitchenOrder = async (id) => {
       order: {
         select: { id: true, orderNumber: true },
       },
+      orderItem: {
+        select: { quantity: true },
+      },
     },
   });
 
   return kitchenOrder;
 };
+

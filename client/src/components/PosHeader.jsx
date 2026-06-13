@@ -1,4 +1,4 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -28,11 +28,14 @@ import {
   BarChart3,
   Search,
   Coffee,
+  LayoutGrid,
 } from "lucide-react";
+
+import { CustomerCaptureModal } from "./CustomerCaptureModal";
 
 export function PosHeader() {
   const navigate = useNavigate();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { pathname } = useLocation();
   const user = useStore((s) => s.users.find((u) => u.id === s.currentUserId));
   const isAdmin = user?.role === "User";
   const tableId = useStore((s) => s.currentTableId);
@@ -42,19 +45,38 @@ export function PosHeader() {
   const setCurrentTable = useStore((s) => s.setCurrentTable);
   const searchQuery = useStore((s) => s.searchQuery);
   const setSearchQuery = useStore((s) => s.setSearchQuery);
+  const createDraftOrder = useStore((s) => s.createDraftOrder);
+  const setDraftOrder = useStore((s) => s.setDraftOrder);
 
   const [showFloor, setShowFloor] = useState(false);
+  const [captureOpen, setCaptureOpen] = useState(false);
+  const [pendingTable, setPendingTable] = useState(null);
 
   const handleLogout = () => {
     closeSession();
     logout();
-    navigate({ to: "/auth" });
+    navigate("/");
   };
 
   const handleSelectTable = (tid) => {
-    setCurrentTable(tid);
-    setShowFloor(false);
-    navigate({ to: "/pos" });
+    const isOccupied = useStore.getState().orders.some(o => o.tableId === tid && o.status === "Draft");
+    if (!isOccupied) {
+      setPendingTable(tid);
+      setCaptureOpen(true);
+      setShowFloor(false);
+    } else {
+      setCurrentTable(tid);
+      setShowFloor(false);
+      navigate("/pos");
+    }
+  };
+
+  const handleCustomerCaptured = (customerId) => {
+    setCaptureOpen(false);
+    const newId = createDraftOrder(pendingTable, customerId);
+    setDraftOrder(newId);
+    setCurrentTable(pendingTable);
+    navigate("/pos");
   };
 
   const isMainPos = pathname === "/pos" || pathname === "/pos/";
@@ -69,6 +91,7 @@ export function PosHeader() {
   return (
     <header className="h-16 border-b border-[#6F4E37]/20 bg-white flex items-center justify-between px-4 shrink-0 shadow-sm select-none">
       <FloorPopup open={showFloor} onSelect={handleSelectTable} onOpenChange={setShowFloor} />
+      <CustomerCaptureModal open={captureOpen} onOpenChange={setCaptureOpen} tableId={pendingTable} onSuccess={handleCustomerCaptured} />
 
       {/* 1. Logo and Brand */}
       <div className="flex items-center gap-2.5">
@@ -130,6 +153,11 @@ export function PosHeader() {
           <span>{table ? `Table ${table.number}` : "Table View"}</span>
         </button>
 
+        {/* Table Status Link */}
+        <Link to="/pos/tables" title="Table Status" className={navLinkClass(pathname === "/pos/tables")}>
+          <LayoutGrid className="w-4 h-4" />
+        </Link>
+
         <div className="h-6 w-[1px] bg-[#6F4E37]/15 mx-1" />
 
         {/* Employee Icon & Name */}
@@ -168,7 +196,7 @@ export function PosHeader() {
                 ].map(({ to, label, icon: Icon }) => (
                   <DropdownMenuItem
                     key={to}
-                    onClick={() => navigate({ to })}
+                    onClick={() => navigate(to)}
                     className="hover:bg-[#FAF3E0] hover:text-[#6F4E37] rounded-lg cursor-pointer px-3.5 py-2.5 text-xs font-semibold transition"
                   >
                     <Icon className="w-4 h-4 mr-2.5 text-[#6F4E37]" /> {label}
