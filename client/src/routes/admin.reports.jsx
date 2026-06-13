@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { AdminShell } from "@/components/AdminShell";
 import { useStore } from "@/lib/store";
@@ -119,10 +119,10 @@ function ReportsPage() {
     <AdminShell title="Reports">
       <div className="flex flex-wrap gap-2.5 mb-6">
         <Select value={period} onValueChange={(v) => setPeriod(v)}>
-          <SelectTrigger className="w-36 bg-[#FAF3E0] border-[#6F4E37]/25 text-white rounded-xl">
+          <SelectTrigger className="w-36 bg-[#FAF3E0] border-[#6F4E37]/25 text-[#2B2118] rounded-xl">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="bg-white border-[#6F4E37]/35 text-white">
+          <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
             <SelectItem value="today">Today</SelectItem>
             <SelectItem value="week">This Week</SelectItem>
             <SelectItem value="month">This Month</SelectItem>
@@ -131,30 +131,30 @@ function ReportsPage() {
         </Select>
 
         <Select value={employee} onValueChange={setEmployee}>
-          <SelectTrigger className="w-44 bg-[#FAF3E0] border-[#6F4E37]/25 text-white rounded-xl">
+          <SelectTrigger className="w-44 bg-[#FAF3E0] border-[#6F4E37]/25 text-[#2B2118] rounded-xl">
             <SelectValue placeholder="Employee" />
           </SelectTrigger>
-          <SelectContent className="bg-white border-[#6F4E37]/35 text-white">
+          <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
             <SelectItem value="all">All Employees</SelectItem>
             {users.map((u) => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
           </SelectContent>
         </Select>
 
         <Select value={session} onValueChange={setSession}>
-          <SelectTrigger className="w-44 bg-[#FAF3E0] border-[#6F4E37]/25 text-white rounded-xl">
+          <SelectTrigger className="w-44 bg-[#FAF3E0] border-[#6F4E37]/25 text-[#2B2118] rounded-xl">
             <SelectValue placeholder="Session" />
           </SelectTrigger>
-          <SelectContent className="bg-white border-[#6F4E37]/35 text-white">
+          <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
             <SelectItem value="all">All Sessions</SelectItem>
             {sessions.map((s) => <SelectItem key={s.id} value={s.id}>{format(new Date(s.openedAt), "M/d HH:mm")}</SelectItem>)}
           </SelectContent>
         </Select>
 
         <Select value={product} onValueChange={setProduct}>
-          <SelectTrigger className="w-44 bg-[#FAF3E0] border-[#6F4E37]/25 text-white rounded-xl">
+          <SelectTrigger className="w-44 bg-[#FAF3E0] border-[#6F4E37]/25 text-[#2B2118] rounded-xl">
             <SelectValue placeholder="Product" />
           </SelectTrigger>
-          <SelectContent className="bg-white border-[#6F4E37]/35 text-white">
+          <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
             <SelectItem value="all">All Products</SelectItem>
             {products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
           </SelectContent>
@@ -179,22 +179,22 @@ function ReportsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl text-white shadow-md">
+        <Card className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl text-[#2B2118] shadow-md">
           <div className="text-xs font-bold uppercase text-[#6F4E37]/60">Total Orders</div>
           <div className="text-3xl font-extrabold text-[#6F4E37] mt-1.5">{totalOrders}</div>
         </Card>
-        <Card className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl text-white shadow-md">
+        <Card className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl text-[#2B2118] shadow-md">
           <div className="text-xs font-bold uppercase text-[#6F4E37]/60">Revenue</div>
           <div className="text-3xl font-extrabold text-[#6F4E37] mt-1.5">₹{revenue.toFixed(2)}</div>
         </Card>
-        <Card className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl text-white shadow-md">
+        <Card className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl text-[#2B2118] shadow-md">
           <div className="text-xs font-bold uppercase text-[#6F4E37]/60">Average Order</div>
           <div className="text-3xl font-extrabold text-[#6F4E37] mt-1.5">₹{avg.toFixed(2)}</div>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <Card className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl text-white shadow-md">
+        <Card className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl text-[#2B2118] shadow-md">
           <h3 className="font-extrabold text-sm uppercase text-[#6F4E37]/80 mb-4 tracking-wider">Sales Trend</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -211,7 +211,7 @@ function ReportsPage() {
           </div>
         </Card>
 
-        <Card className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl text-white shadow-md">
+        <Card className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl text-[#2B2118] shadow-md">
           <h3 className="font-extrabold text-sm uppercase text-[#6F4E37]/80 mb-4 tracking-wider">Top Categories</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -230,7 +230,7 @@ function ReportsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Card className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl text-white shadow-md">
+        <Card className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl text-[#2B2118] shadow-md">
           <h3 className="font-extrabold text-sm uppercase text-[#6F4E37]/80 mb-4 tracking-wider">Top Orders</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -246,7 +246,7 @@ function ReportsPage() {
                   <tr key={o.id} className="border-b border-[#6F4E37]/10 last:border-0 hover:bg-[#FAF3E0]/10 transition duration-150">
                     <td className="p-2.5 font-mono font-bold text-[#6F4E37]">#{o.number}</td>
                     <td className="p-2.5 text-[#6F4E37]/80">{format(new Date(o.createdAt), "M/d HH:mm")}</td>
-                    <td className="p-2.5 text-right font-extrabold text-white">₹{o.total.toFixed(2)}</td>
+                    <td className="p-2.5 text-right font-extrabold text-[#2B2118]">₹{o.total.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -254,7 +254,7 @@ function ReportsPage() {
           </div>
         </Card>
 
-        <Card className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl text-white shadow-md">
+        <Card className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl text-[#2B2118] shadow-md">
           <h3 className="font-extrabold text-sm uppercase text-[#6F4E37]/80 mb-4 tracking-wider">Top Products</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -268,7 +268,7 @@ function ReportsPage() {
               <tbody>
                 {topProducts.map((p, i) => (
                   <tr key={i} className="border-b border-[#6F4E37]/10 last:border-0 hover:bg-[#FAF3E0]/10 transition duration-150">
-                    <td className="p-2.5 font-semibold text-white">{p.name}</td>
+                    <td className="p-2.5 font-semibold text-[#2B2118]">{p.name}</td>
                     <td className="p-2.5 text-right text-[#6F4E37]/80 font-bold">{p.qty}</td>
                     <td className="p-2.5 text-right font-extrabold text-[#6F4E37]">₹{p.rev.toFixed(2)}</td>
                   </tr>

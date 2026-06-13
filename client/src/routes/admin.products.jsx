@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { AdminShell } from "@/components/AdminShell";
 import { useStore } from "@/lib/store";
@@ -46,7 +46,7 @@ function ProductsPage() {
 
   const startNew = () => {
     setEditing({
-      id: Math.random().toString(36).slice(2),
+      id: "p-" + Math.random().toString(36).slice(2),
       name: "",
       categoryId: categories[0]?.id ?? "",
       price: 0,
@@ -58,22 +58,32 @@ function ProductsPage() {
     setOpen(true);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!editing?.name) return toast.error("Name required");
-    upsertProduct(editing);
-    setOpen(false);
-    toast.success("Saved");
+    try {
+      await upsertProduct(editing);
+      setOpen(false);
+      toast.success("Product saved successfully");
+    } catch (err) {
+      toast.error(err.message || "Failed to save product");
+    }
   };
 
-  const createCat = () => {
-    if (!newCatName) return;
+  const createCat = async () => {
+    if (!newCatName?.trim()) return;
     const id = "c-" + Math.random().toString(36).slice(2, 6);
     const colors = ["#F59E0B", "#EC4899", "#10B981", "#3B82F6", "#8B5CF6"];
-    upsertCategory({ id, name: newCatName, color: colors[Math.floor(Math.random() * colors.length)] });
-    if (editing) setEditing({ ...editing, categoryId: id });
-    setNewCatName("");
-    setCatOpen(false);
+    try {
+      await upsertCategory({ id, name: newCatName, color: colors[Math.floor(Math.random() * colors.length)] });
+      if (editing) setEditing({ ...editing, categoryId: id });
+      setNewCatName("");
+      setCatOpen(false);
+      toast.success("Category created successfully");
+    } catch (err) {
+      toast.error(err.message || "Failed to create category");
+    }
   };
+
 
   return (
     <AdminShell title="Products">
@@ -102,12 +112,12 @@ function ProductsPage() {
             placeholder="Search products..." 
             value={q} 
             onChange={(e) => setQ(e.target.value)} 
-            className="pl-9 bg-[#FAF3E0] text-white border-[#6F4E37]/30 focus:border-[#6F4E37] focus:bg-white rounded-xl"
+            className="pl-9 bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/30 focus:border-[#6F4E37] focus:bg-white rounded-xl"
           />
         </div>
       </div>
 
-      <Card className="bg-white border border-[#6F4E37]/25 rounded-3xl overflow-hidden shadow-md text-white">
+      <Card className="bg-white border border-[#6F4E37]/25 rounded-3xl overflow-hidden shadow-md text-[#2B2118]">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-[#FAF3E0] border-b border-[#6F4E37]/20">
@@ -134,7 +144,7 @@ function ProductsPage() {
                         className="border-[#6F4E37]/30 text-[#6F4E37] data-[state=checked]:bg-[#6F4E37]"
                       />
                     </td>
-                    <td className="p-3 font-semibold text-white">{p.name}</td>
+                    <td className="p-3 font-semibold text-[#2B2118]">{p.name}</td>
                     <td className="p-3">
                       {c && (
                         <span
@@ -153,7 +163,7 @@ function ProductsPage() {
                           size="icon" 
                           variant="ghost" 
                           onClick={() => { setEditing(p); setOpen(true); }}
-                          className="hover:bg-[#FAF3E0] text-[#6F4E37]/60 hover:text-white h-8 w-8 rounded-lg cursor-pointer"
+                          className="hover:bg-[#6F4E37]/10 text-[#6F4E37]/60 hover:text-[#6F4E37] h-8 w-8 rounded-lg cursor-pointer"
                         >
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -176,9 +186,9 @@ function ProductsPage() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="bg-white border border-[#6F4E37]/30 text-white max-w-lg rounded-3xl">
+        <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#2B2118] max-w-lg rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-white font-extrabold text-lg">
+            <DialogTitle className="text-[#6F4E37] font-extrabold text-lg">
               {products.find((p) => p.id === editing?.id) ? "Edit" : "New"} Product
             </DialogTitle>
           </DialogHeader>
@@ -189,7 +199,7 @@ function ProductsPage() {
                 <Input 
                   value={editing.name} 
                   onChange={(e) => setEditing({ ...editing, name: e.target.value })} 
-                  className="bg-[#FAF3E0] text-white border-[#6F4E37]/25 rounded-xl font-semibold"
+                  className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl font-semibold"
                 />
               </div>
               <div className="space-y-1">
@@ -201,10 +211,10 @@ function ProductsPage() {
                     else setEditing({ ...editing, categoryId: v });
                   }}
                 >
-                  <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 text-white rounded-xl">
+                  <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 text-[#2B2118] rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-[#6F4E37]/35 text-white">
+                  <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
                     {categories.map((c) => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
@@ -218,7 +228,7 @@ function ProductsPage() {
                   type="number" 
                   value={editing.price} 
                   onChange={(e) => setEditing({ ...editing, price: parseFloat(e.target.value) || 0 })} 
-                  className="bg-[#FAF3E0] text-white border-[#6F4E37]/25 rounded-xl font-bold text-[#6F4E37]"
+                  className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl font-bold text-[#6F4E37]"
                 />
               </div>
               <div className="space-y-1">
@@ -226,16 +236,16 @@ function ProductsPage() {
                 <Input 
                   value={editing.unit} 
                   onChange={(e) => setEditing({ ...editing, unit: e.target.value })} 
-                  className="bg-[#FAF3E0] text-white border-[#6F4E37]/25 rounded-xl"
+                  className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-[#6F4E37]/60">Tax</Label>
                 <Select value={String(editing.tax)} onValueChange={(v) => setEditing({ ...editing, tax: parseInt(v) })}>
-                  <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 text-white rounded-xl">
+                  <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 text-[#2B2118] rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-[#6F4E37]/35 text-white">
+                  <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
                     {TAXES.map((t) => (
                       <SelectItem key={t} value={String(t)}>{t}%</SelectItem>
                     ))}
@@ -247,7 +257,7 @@ function ProductsPage() {
                 <Input 
                   value={editing.description ?? ""} 
                   onChange={(e) => setEditing({ ...editing, description: e.target.value })} 
-                  className="bg-[#FAF3E0] text-white border-[#6F4E37]/25 rounded-xl"
+                  className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl"
                 />
               </div>
               <div className="col-span-2 flex items-center gap-3 pt-2">
@@ -280,16 +290,16 @@ function ProductsPage() {
       </Dialog>
 
       <Dialog open={catOpen} onOpenChange={setCatOpen}>
-        <DialogContent className="bg-white border border-[#6F4E37]/30 text-white max-w-sm rounded-3xl">
+        <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#2B2118] max-w-sm rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-white font-extrabold text-lg">New Category</DialogTitle>
+            <DialogTitle className="text-[#6F4E37] font-extrabold text-lg">New Category</DialogTitle>
           </DialogHeader>
           <div className="py-2 space-y-2">
             <Label className="text-xs text-[#6F4E37]/60">Category Name</Label>
             <Input 
               value={newCatName} 
               onChange={(e) => setNewCatName(e.target.value)} 
-              className="bg-[#FAF3E0] text-white border-[#6F4E37]/25 rounded-xl"
+              className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl"
             />
           </div>
           <DialogFooter className="flex gap-2 pt-2">

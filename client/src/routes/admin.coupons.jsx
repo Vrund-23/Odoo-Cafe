@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { AdminShell } from "@/components/AdminShell";
 import { useStore } from "@/lib/store";
@@ -35,11 +35,33 @@ function CouponsPage() {
     setOpen(true);
   };
 
-  const save = () => {
+  const save = async () => {
     if (!editing?.name) return toast.error("Name required");
-    upsert(editing);
-    setOpen(false);
-    toast.success("Saved");
+    try {
+      await upsert(editing);
+      setOpen(false);
+      toast.success("Saved successfully");
+    } catch (err) {
+      toast.error(err.message || "Failed to save coupon/promotion");
+    }
+  };
+
+  const handleToggleActive = async (c, active) => {
+    try {
+      await upsert({ ...c, active });
+      toast.success("Coupon status updated");
+    } catch (err) {
+      toast.error(err.message || "Failed to update status");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await del(id);
+      toast.success("Deleted successfully");
+    } catch (err) {
+      toast.error(err.message || "Failed to delete");
+    }
   };
 
   return (
@@ -50,7 +72,7 @@ function CouponsPage() {
       >
         <Plus className="w-4 h-4 mr-1" /> New Coupon
       </Button>
-      <Card className="bg-white border border-[#6F4E37]/25 rounded-3xl overflow-hidden shadow-md text-white">
+      <Card className="bg-white border border-[#6F4E37]/25 rounded-3xl overflow-hidden shadow-md text-[#2B2118]">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-[#FAF3E0] border-b border-[#6F4E37]/20">
@@ -66,21 +88,21 @@ function CouponsPage() {
             <tbody>
               {coupons.map((c) => (
                 <tr key={c.id} className="border-b border-[#6F4E37]/10 last:border-0 hover:bg-[#FAF3E0]/10 transition duration-150">
-                  <td className="p-3 font-semibold text-white">{c.name}</td>
+                  <td className="p-3 font-semibold text-[#2B2118]">{c.name}</td>
                   <td className="p-3 text-[#6F4E37]/80">{c.type}</td>
                   <td className="p-3 font-bold text-[#6F4E37]">
                     {c.discountValue}
                     {c.discountKind === "percent" ? "%" : "₹"}
                   </td>
                   <td className="p-3 text-xs font-mono text-[#6F4E37]/60">
-                    {c.type === "Coupon" && <span className="bg-[#FAF3E0] px-2 py-1 rounded border border-[#6F4E37]/20 text-white">{c.code}</span>}
+                    {c.type === "Coupon" && <span className="bg-[#FAF3E0] px-2 py-1 rounded border border-[#6F4E37]/20 text-[#6F4E37]">{c.code}</span>}
                     {c.type === "Promotion" && c.apply === "Product" && `Product min qty ${c.minQty}`}
                     {c.type === "Promotion" && c.apply === "Order" && `Order ≥ ₹${c.minOrderAmount}`}
                   </td>
                   <td className="p-3">
                     <Switch 
                       checked={c.active} 
-                      onCheckedChange={(v) => upsert({ ...c, active: v })} 
+                      onCheckedChange={(v) => handleToggleActive(c, v)} 
                       className="data-[state=checked]:bg-[#6F4E37]"
                     />
                   </td>
@@ -90,14 +112,14 @@ function CouponsPage() {
                         size="icon" 
                         variant="ghost" 
                         onClick={() => { setEditing(c); setOpen(true); }}
-                        className="hover:bg-[#FAF3E0] text-[#6F4E37]/60 hover:text-white h-8 w-8 rounded-lg cursor-pointer"
+                        className="hover:bg-[#6F4E37]/10 text-[#6F4E37]/60 hover:text-[#6F4E37] h-8 w-8 rounded-lg cursor-pointer"
                       >
                         <Pencil className="w-4 h-4" />
                       </Button>
                       <Button 
                         size="icon" 
                         variant="ghost" 
-                        onClick={() => del(c.id)}
+                        onClick={() => handleDelete(c.id)}
                         className="hover:bg-red-500/10 text-[#6F4E37]/60 hover:text-red-400 h-8 w-8 rounded-lg cursor-pointer"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -108,13 +130,14 @@ function CouponsPage() {
               ))}
             </tbody>
           </table>
+
         </div>
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="bg-white border border-[#6F4E37]/30 text-white max-w-md rounded-3xl">
+        <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#2B2118] max-w-md rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-white font-extrabold text-lg">
+            <DialogTitle className="text-[#6F4E37] font-extrabold text-lg">
               {coupons.find((c) => c.id === editing?.id) ? "Edit" : "New"} Coupon/Promotion
             </DialogTitle>
           </DialogHeader>
@@ -125,16 +148,16 @@ function CouponsPage() {
                 <Input 
                   value={editing.name} 
                   onChange={(e) => setEditing({ ...editing, name: e.target.value })} 
-                  className="bg-[#FAF3E0] text-white border-[#6F4E37]/25 rounded-xl"
+                  className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-[#6F4E37]/60">Type</Label>
                 <Select value={editing.type} onValueChange={(v) => setEditing({ ...editing, type: v })}>
-                  <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 rounded-xl text-white">
+                  <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 rounded-xl text-[#2B2118]">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-[#6F4E37]/35 text-white">
+                  <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
                     <SelectItem value="Coupon">Coupon</SelectItem>
                     <SelectItem value="Promotion">Promotion (Automated)</SelectItem>
                   </SelectContent>
@@ -146,7 +169,7 @@ function CouponsPage() {
                   <Input 
                     value={editing.code ?? ""} 
                     onChange={(e) => setEditing({ ...editing, code: e.target.value })} 
-                    className="bg-[#FAF3E0] text-white border-[#6F4E37]/25 rounded-xl font-mono uppercase"
+                    className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl font-mono uppercase"
                   />
                 </div>
               )}
@@ -155,10 +178,10 @@ function CouponsPage() {
                   <div className="space-y-1">
                     <Label className="text-xs text-[#6F4E37]/60">Apply</Label>
                     <Select value={editing.apply ?? "Order"} onValueChange={(v) => setEditing({ ...editing, apply: v })}>
-                      <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 rounded-xl text-white">
+                      <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 rounded-xl text-[#2B2118]">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-white border-[#6F4E37]/35 text-white">
+                      <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
                         <SelectItem value="Product">Product</SelectItem>
                         <SelectItem value="Order">Order</SelectItem>
                       </SelectContent>
@@ -169,10 +192,10 @@ function CouponsPage() {
                       <div className="space-y-1">
                         <Label className="text-xs text-[#6F4E37]/60">Product</Label>
                         <Select value={editing.productId ?? ""} onValueChange={(v) => setEditing({ ...editing, productId: v })}>
-                          <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 rounded-xl text-white">
+                          <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 rounded-xl text-[#2B2118]">
                             <SelectValue placeholder="Select product" />
                           </SelectTrigger>
-                          <SelectContent className="bg-white border-[#6F4E37]/35 text-white">
+                          <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
                             {products.map((p) => (
                               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                             ))}
@@ -185,7 +208,7 @@ function CouponsPage() {
                           type="number" 
                           value={editing.minQty ?? 1} 
                           onChange={(e) => setEditing({ ...editing, minQty: parseInt(e.target.value) || 1 })} 
-                          className="bg-[#FAF3E0] text-white border-[#6F4E37]/25 rounded-xl"
+                          className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl"
                         />
                       </div>
                     </>
@@ -196,7 +219,7 @@ function CouponsPage() {
                         type="number" 
                         value={editing.minOrderAmount ?? 0} 
                         onChange={(e) => setEditing({ ...editing, minOrderAmount: parseFloat(e.target.value) || 0 })} 
-                        className="bg-[#FAF3E0] text-white border-[#6F4E37]/25 rounded-xl"
+                        className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl"
                       />
                     </div>
                   )}
@@ -209,16 +232,16 @@ function CouponsPage() {
                     type="number" 
                     value={editing.discountValue} 
                     onChange={(e) => setEditing({ ...editing, discountValue: parseFloat(e.target.value) || 0 })} 
-                    className="bg-[#FAF3E0] text-white border-[#6F4E37]/25 rounded-xl"
+                    className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl"
                   />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-[#6F4E37]/60">Kind</Label>
                   <Select value={editing.discountKind} onValueChange={(v) => setEditing({ ...editing, discountKind: v })}>
-                    <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 rounded-xl text-white">
+                    <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 rounded-xl text-[#2B2118]">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-[#6F4E37]/35 text-white">
+                    <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
                       <SelectItem value="percent">% Percentage</SelectItem>
                       <SelectItem value="amount">₹ Amount</SelectItem>
                     </SelectContent>

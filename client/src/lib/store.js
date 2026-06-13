@@ -207,6 +207,7 @@ export const useStore = create(
           }));
         } catch (e) {
           console.error(e);
+          throw e;
         }
       },
       deleteCategory: async (id) => {
@@ -229,7 +230,7 @@ export const useStore = create(
             imageUrl: p.imageUrl,
             showInKds: p.sendToKitchen,
           };
-          const saved = p.id && !p.id.startsWith("p")
+          const saved = p.id && !p.id.startsWith("p-")
             ? await productApi.update(p.id, payload)
             : await productApi.create(payload);
           const norm = normaliseProduct(saved);
@@ -238,7 +239,10 @@ export const useStore = create(
               ? s.products.map((x) => (x.id === norm.id ? norm : x))
               : [...s.products, norm],
           }));
-        } catch (e) { console.error(e); }
+        } catch (e) {
+          console.error(e);
+          throw e;
+        }
       },
       deleteProduct: async (id) => {
         try {
@@ -315,14 +319,36 @@ export const useStore = create(
       // ── Coupons ────────────────────────────────────────────
       upsertCoupon: async (c) => {
         try {
-          const saved = c.id ? await couponApi.update(c.id, c) : await couponApi.create(c);
+          // Map UI fields → DB fields
+          const discountType = c.discountKind === "percent" ? "PERCENTAGE" : "FIXED";
+          const isPromotion = c.type === "Promotion";
+          const payload = {
+            name: c.name,
+            code: c.code || undefined,
+            discountType,
+            discountValue: c.discountValue,
+            isActive: c.active,
+            ...(isPromotion && {
+              promotionType: c.apply === "Product" ? "PRODUCT" : "ORDER",
+              productId: c.productId || null,
+              minQuantity: c.minQty ?? null,
+              minOrderAmount: c.minOrderAmount ?? null,
+            }),
+          };
+          const isNew = !c.id || c.id.startsWith("co-");
+          const saved = isNew
+            ? await couponApi.create(payload)
+            : await couponApi.update(c.id, payload);
           const norm = normaliseCoupon(saved);
           set((s) => ({
-            coupons: s.coupons.some((x) => x.id === norm.id)
-              ? s.coupons.map((x) => (x.id === norm.id ? norm : x))
-              : [...s.coupons, norm],
+            coupons: isNew
+              ? [...s.coupons.filter((x) => x.id !== c.id), norm]
+              : s.coupons.map((x) => (x.id === norm.id ? norm : x)),
           }));
-        } catch (e) { console.error(e); }
+        } catch (e) {
+          console.error("upsertCoupon error:", e);
+          throw e;
+        }
       },
       deleteCoupon: async (id) => {
         try {
@@ -528,45 +554,89 @@ export const useStore = create(
           ),
         }));
       },
-
-      sendOrderToKitchen: (orderId) => {
+      sendOrderToKitchen: async (orderId) => {
         const s = get();
         const o = s.orders.find((x) => x.id === orderId);
-        if (!o) return;
-        const items = o.lines
-          .map((l) => {
-            const p = s.products.find((p) => p.id === l.productId);
-            return p?.sendToKitchen ? { productId: l.productId, qty: l.qty, done: false } : null;
-          })
-          .filter(Boolean);
-        if (!items.length) return;
-        const filtered = s.kds.filter((k) => k.orderId !== orderId);
-        const ticket = { id: uid(), orderId, orderNumber: o.number, items, stage: "ToCook", createdAt: Date.now() };
-        set({ kds: [ticket, ...filtered] });
+        if (!o || !o.lines.length) return;
+
+        // Send ALL items to the KDS (kitchen staff sees everything)
+        const items = o.lines.map((l) => ({
+          productId: l.productId,
+          qty: l.qty,
+          done: false,
+        }));
+
+        // Always write to local KDS immediately (optimistic update)
+        const prevKds = get().kds.filter((k) => k.orderId !== orderId);
+        const localTicket = {
+          id: uid(),
+          orderId,
+          orderNumber: o.number,
+          items,
+          stage: "ToCook",
+          createdAt: Date.now(),
+        };
+        set({ kds: [localTicket, ...prevKds] });
         get().updateOrder(orderId, { sentToKitchen: true });
-        // Fire-and-forget to server
-        kitchenApi.updateStatus && kitchenApi.updateStatus(orderId, { stage: "ToCook" }).catch(() => {});
+
+        // Then try to persist to DB in the background
+        try {
+          const sessionId = o.sessionId ?? get().currentSessionId;
+          if (!sessionId) throw new Error("No active session");
+
+          const savedOrder = await orderApi.create({
+            sessionId,
+            tableId: o.tableId,
+            employeeId: o.employeeId ?? get().currentUserId,
+            items: o.lines.map((l) => ({ productId: l.productId, quantity: l.qty, unitPrice: l.unitPrice })),
+          });
+
+          // Replace local draft ID with the real DB ID everywhere
+          set((state) => ({
+            orders: state.orders.map((ord) =>
+              ord.id === orderId
+                ? { ...ord, id: savedOrder.id, number: savedOrder.orderNumber, sentToKitchen: true }
+                : ord
+            ),
+            draftOrderId: state.draftOrderId === orderId ? savedOrder.id : state.draftOrderId,
+            // Also update the KDS ticket orderId/orderNumber
+            kds: state.kds.map((k) =>
+              k.orderId === orderId
+                ? { ...k, orderId: savedOrder.id, orderNumber: savedOrder.orderNumber }
+                : k
+            ),
+          }));
+        } catch (err) {
+          console.error("sendOrderToKitchen DB sync failed (local KDS still active):", err);
+        }
       },
 
       payOrder: async (orderId, paymentMethodId, amountPaid, ref) => {
         const o = get().orders.find((x) => x.id === orderId);
         if (!o) return;
-        try {
-          await orderApi.create({
-            sessionId: o.sessionId,
-            tableId: o.tableId,
-            employeeId: o.employeeId,
-            items: o.lines.map((l) => ({ productId: l.productId, quantity: l.qty, unitPrice: l.unitPrice })),
-            subtotal: o.subtotal,
-            taxAmount: o.tax,
-            discountAmount: o.discountTotal,
-            total: o.total,
-            paymentMethod: paymentMethodId,
-            paymentReference: ref,
-          });
-        } catch { /* best effort — still mark local as paid */ }
+        // Mark paid locally immediately
         get().updateOrder(orderId, { status: "Paid", paymentMethodId, amountPaid, paymentRef: ref });
         set({ draftOrderId: null, currentTableId: null });
+        try {
+          const isDbOrder = orderId.length > 15; // UUID is 36 chars, local uid() is 8 chars
+          if (isDbOrder) {
+            // PUT /orders/:id/status
+            await orderApi.update(orderId, { status: "PAID", paymentMethod: paymentMethodId, paymentReference: ref });
+          } else {
+            const sessionId = o.sessionId ?? get().currentSessionId;
+            if (sessionId) {
+              // Create new order directly with PAID status
+              await orderApi.create({
+                sessionId,
+                tableId: o.tableId,
+                employeeId: o.employeeId ?? get().currentUserId,
+                items: o.lines.map((l) => ({ productId: l.productId, quantity: l.qty, unitPrice: l.unitPrice })),
+              });
+            }
+          }
+        } catch (err) {
+          console.error("Failed to sync payment to server:", err);
+        }
       },
 
       setKdsStage: (ticketId, stage) =>

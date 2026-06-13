@@ -122,8 +122,9 @@ export const sessionApi = {
 
 // ── Kitchen ───────────────────────────────────────────────
 export const kitchenApi = {
-  getAll: () => request("GET", "/kitchen"),
-  updateStatus: (id, data) => request("PUT", `/kitchen/${id}`, data),
+  getAll: () => request("GET", "/kitchen/orders"),
+  updateStatus: (id, status) => request("PUT", `/kitchen/orders/${id}/status`, { status }),
+  complete: (id) => request("PUT", `/kitchen/orders/${id}/complete`),
 };
 
 // Save and retrieve auth token

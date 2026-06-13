@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { AdminShell } from "@/components/AdminShell";
 import { useStore } from "@/lib/store";
@@ -52,7 +52,7 @@ function UsersPage() {
       >
         <Plus className="w-4 h-4 mr-1" /> New User
       </Button>
-      <Card className="bg-white border border-[#6F4E37]/25 rounded-3xl overflow-hidden shadow-md text-white">
+      <Card className="bg-white border border-[#6F4E37]/25 rounded-3xl overflow-hidden shadow-md text-[#2B2118]">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-[#FAF3E0] border-b border-[#6F4E37]/20">
@@ -67,14 +67,14 @@ function UsersPage() {
             <tbody>
               {users.map((u) => (
                 <tr key={u.id} className="border-b border-[#6F4E37]/10 last:border-0 hover:bg-[#FAF3E0]/10 transition duration-150">
-                  <td className="p-3 font-semibold text-white">{u.name}</td>
+                  <td className="p-3 font-semibold text-[#2B2118]">{u.name}</td>
                   <td className="p-3 text-[#6F4E37]/80">{u.email}</td>
                   <td className="p-3">
                     <Select value={u.role} onValueChange={(v) => upsert({ ...u, role: v })}>
-                      <SelectTrigger className="w-28 bg-[#FAF3E0] border-[#6F4E37]/20 text-white rounded-xl">
+                      <SelectTrigger className="w-28 bg-[#FAF3E0] border-[#6F4E37]/20 text-[#2B2118] rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-white border-[#6F4E37]/35 text-white">
+                      <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
                         <SelectItem value="User">User</SelectItem>
                         <SelectItem value="Employee">Employee</SelectItem>
                       </SelectContent>
@@ -98,7 +98,7 @@ function UsersPage() {
                         variant="ghost" 
                         title="Change password" 
                         onClick={() => { setPwdFor(u); setPwd(""); }}
-                        className="hover:bg-[#FAF3E0] text-[#6F4E37]/60 hover:text-white h-8 w-8 rounded-lg cursor-pointer"
+                        className="hover:bg-[#6F4E37]/10 text-[#6F4E37]/60 hover:text-[#6F4E37] h-8 w-8 rounded-lg cursor-pointer"
                       >
                         <Key className="w-4 h-4" />
                       </Button>
@@ -107,7 +107,7 @@ function UsersPage() {
                         variant="ghost" 
                         title="Archive" 
                         onClick={() => archive(u.id)}
-                        className="hover:bg-[#FAF3E0] text-[#6F4E37]/60 hover:text-white h-8 w-8 rounded-lg cursor-pointer"
+                        className="hover:bg-[#6F4E37]/10 text-[#6F4E37]/60 hover:text-[#6F4E37] h-8 w-8 rounded-lg cursor-pointer"
                       >
                         <Archive className="w-4 h-4" />
                       </Button>
@@ -129,9 +129,9 @@ function UsersPage() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="bg-white border border-[#6F4E37]/30 text-white max-w-sm rounded-3xl">
+        <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#2B2118] max-w-sm rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-white font-extrabold text-lg">
+            <DialogTitle className="text-[#6F4E37] font-extrabold text-lg">
               {users.find((u) => u.id === editing?.id) ? "Edit" : "New"} User
             </DialogTitle>
           </DialogHeader>
@@ -142,7 +142,7 @@ function UsersPage() {
                 <Input 
                   value={editing.name} 
                   onChange={(e) => setEditing({ ...editing, name: e.target.value })} 
-                  className="bg-[#FAF3E0] text-white border-[#6F4E37]/25 rounded-xl font-semibold"
+                  className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl font-semibold"
                 />
               </div>
               <div className="space-y-1">
@@ -150,7 +150,7 @@ function UsersPage() {
                 <Input 
                   value={editing.email} 
                   onChange={(e) => setEditing({ ...editing, email: e.target.value })} 
-                  className="bg-[#FAF3E0] text-white border-[#6F4E37]/25 rounded-xl"
+                  className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl"
                 />
               </div>
               <div className="space-y-1">
@@ -159,16 +159,16 @@ function UsersPage() {
                   type="password" 
                   value={editing.password} 
                   onChange={(e) => setEditing({ ...editing, password: e.target.value })} 
-                  className="bg-[#FAF3E0] text-white border-[#6F4E37]/25 rounded-xl"
+                  className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl"
                 />
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-[#6F4E37]/60">Role</Label>
                 <Select value={editing.role} onValueChange={(v) => setEditing({ ...editing, role: v })}>
-                  <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 text-white rounded-xl">
+                  <SelectTrigger className="bg-[#FAF3E0] border-[#6F4E37]/25 text-[#2B2118] rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-[#6F4E37]/35 text-white">
+                  <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
                     <SelectItem value="User">User (Admin)</SelectItem>
                     <SelectItem value="Employee">Employee (Cashier)</SelectItem>
                   </SelectContent>
@@ -195,9 +195,9 @@ function UsersPage() {
       </Dialog>
 
       <Dialog open={!!pwdFor} onOpenChange={(v) => !v && setPwdFor(null)}>
-        <DialogContent className="bg-white border border-[#6F4E37]/30 text-white max-w-sm rounded-3xl">
+        <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#2B2118] max-w-sm rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-white font-extrabold text-lg">Change password for {pwdFor?.name}</DialogTitle>
+            <DialogTitle className="text-[#6F4E37] font-extrabold text-lg">Change password for {pwdFor?.name}</DialogTitle>
           </DialogHeader>
           <div className="py-2 space-y-2">
             <Label className="text-xs text-[#6F4E37]/60">New Password</Label>
@@ -206,7 +206,7 @@ function UsersPage() {
               placeholder="New password..." 
               value={pwd} 
               onChange={(e) => setPwd(e.target.value)} 
-              className="bg-[#FAF3E0] text-white border-[#6F4E37]/25 rounded-xl"
+              className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/25 rounded-xl"
             />
           </div>
           <DialogFooter className="flex gap-2 pt-2">

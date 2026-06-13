@@ -1,4 +1,4 @@
-﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useStore } from "@/lib/store";
 import { Input } from "@/components/ui/input";
@@ -50,7 +50,7 @@ function OrdersPage() {
   };
 
   return (
-    <div className="p-6 bg-[#FAF3E0] text-white min-h-[calc(100vh-4rem)] max-w-6xl mx-auto space-y-4 select-none">
+    <div className="p-6 bg-[#FAF3E0] text-[#2B2118] min-h-[calc(100vh-4rem)] max-w-6xl mx-auto space-y-4 select-none">
       <div className="flex items-center justify-between mb-2">
         <h1 className="text-2xl font-extrabold text-[#6F4E37] tracking-tight">Orders</h1>
         <div className="relative w-64">
@@ -59,7 +59,7 @@ function OrdersPage() {
             placeholder="Search by name, # or date..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="pl-9 bg-[#FAF3E0] text-white border-[#6F4E37]/30 focus:border-[#6F4E37] focus:bg-white rounded-xl"
+            className="pl-9 bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/30 focus:border-[#6F4E37] focus:bg-white rounded-xl"
           />
         </div>
       </div>
@@ -87,7 +87,7 @@ function OrdersPage() {
                   >
                     <td className="p-3 text-[#6F4E37]/80">{format(new Date(o.createdAt), "M/d HH:mm")}</td>
                     <td className="p-3 font-mono font-bold text-[#6F4E37]">#{o.number}</td>
-                    <td className="p-3 text-white font-semibold">{c?.name ?? "-"}</td>
+                    <td className="p-3 text-[#2B2118] font-[#2B2118] font-semibold">{c?.name ?? "-"}</td>
                     <td className="p-3 text-right font-extrabold text-[#6F4E37]">₹{o.total.toFixed(2)}</td>
                     <td className="p-3">
                       <Badge
@@ -118,19 +118,19 @@ function OrdersPage() {
       </Card>
 
       <Dialog open={!!order} onOpenChange={(v) => !v && setSelected(null)}>
-        <DialogContent className="bg-white border border-[#6F4E37]/30 text-white max-w-md rounded-3xl">
+        <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#2B2118] max-w-md rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-white font-extrabold text-lg">Order #{order?.number}</DialogTitle>
+            <DialogTitle className="text-[#6F4E37] font-extrabold text-lg">Order #{order?.number}</DialogTitle>
           </DialogHeader>
           {order && (
             <div className="space-y-4 py-2 text-sm text-[#6F4E37]/80">
               <div className="flex justify-between border-b border-[#6F4E37]/10 pb-2">
                 <span>Date:</span>
-                <span className="font-bold text-white">{format(new Date(order.createdAt), "M/d HH:mm")}</span>
+                <span className="font-bold text-[#2B2118]">{format(new Date(order.createdAt), "M/d HH:mm")}</span>
               </div>
               <div className="flex justify-between border-b border-[#6F4E37]/10 pb-2">
                 <span>Customer:</span>
-                <span className="font-bold text-white">
+                <span className="font-bold text-[#2B2118]">
                   {customers.find((c) => c.id === order.customerId)?.name ?? "-"}
                 </span>
               </div>
@@ -153,16 +153,16 @@ function OrdersPage() {
                 </Badge>
               </div>
               <div className="pt-2">
-                <div className="font-bold text-white mb-2">Products:</div>
+                <div className="font-bold text-[#6F4E37] mb-2">Products:</div>
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                   {order.lines.map((l) => {
                     const p = products.find((x) => x.id === l.productId);
                     return (
                       <div key={l.productId} className="flex justify-between bg-[#FAF3E0]/40 p-2 rounded-xl border border-[#6F4E37]/10">
-                        <span className="text-zinc-200">
+                        <span className="text-[#2B2118]">
                           {p?.name} <span className="text-xs text-[#6F4E37] font-bold">× {l.qty}</span>
                         </span>
-                        <span className="font-bold text-white">₹{(l.qty * l.unitPrice).toFixed(2)}</span>
+                        <span className="font-bold text-[#2B2118]">₹{(l.qty * l.unitPrice).toFixed(2)}</span>
                       </div>
                     );
                   })}

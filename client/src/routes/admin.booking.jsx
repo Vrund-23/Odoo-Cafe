@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { AdminShell } from "@/components/AdminShell";
 import { useStore } from "@/lib/store";
@@ -26,7 +26,7 @@ function BookingPage() {
           placeholder="New floor name..." 
           value={newFloor} 
           onChange={(e) => setNewFloor(e.target.value)} 
-          className="max-w-xs bg-[#FAF3E0] text-white border-[#6F4E37]/30 focus:border-[#6F4E37] rounded-xl" 
+          className="max-w-xs bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/30 focus:border-[#6F4E37] rounded-xl" 
         />
         <Button
           onClick={() => {
@@ -43,12 +43,12 @@ function BookingPage() {
         {floors.map((f) => {
           const fTables = tables.filter((t) => t.floorId === f.id);
           return (
-            <Card key={f.id} className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl shadow-md text-white">
+            <Card key={f.id} className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl shadow-md text-[#2B2118]">
               <div className="flex items-center justify-between mb-4 border-b border-[#6F4E37]/10 pb-3">
                 <Input
                   value={f.name}
                   onChange={(e) => upsertFloor({ ...f, name: e.target.value })}
-                  className="max-w-xs font-bold text-white bg-[#FAF3E0] border-[#6F4E37]/20 focus:border-[#6F4E37] rounded-xl"
+                  className="max-w-xs font-bold text-[#2B2118] bg-[#FAF3E0] border-[#6F4E37]/20 focus:border-[#6F4E37] rounded-xl"
                 />
                 <div className="flex gap-2">
                   <Button
@@ -95,7 +95,7 @@ function BookingPage() {
                             type="number"
                             value={t.number}
                             onChange={(e) => upsertTable({ ...t, number: parseInt(e.target.value) || 0 })}
-                            className="w-24 bg-[#FAF3E0] text-white border-[#6F4E37]/20 focus:border-[#6F4E37] rounded-xl font-bold"
+                            className="w-24 bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/20 focus:border-[#6F4E37] rounded-xl font-bold"
                           />
                         </td>
                         <td className="p-3">
@@ -103,7 +103,7 @@ function BookingPage() {
                             type="number"
                             value={t.seats}
                             onChange={(e) => upsertTable({ ...t, seats: parseInt(e.target.value) || 0 })}
-                            className="w-24 bg-[#FAF3E0] text-white border-[#6F4E37]/20 focus:border-[#6F4E37] rounded-xl font-bold"
+                            className="w-24 bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/20 focus:border-[#6F4E37] rounded-xl font-bold"
                           />
                         </td>
                         <td className="p-3">

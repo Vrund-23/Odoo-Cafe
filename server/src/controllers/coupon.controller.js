@@ -39,6 +39,16 @@ export const updateCoupon = async (req, res) => {
   }
 };
 
+export const deleteCoupon = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const coupon = await couponService.deleteCoupon(id);
+    return successResponse(res, coupon, 'Coupon deleted successfully');
+  } catch (error) {
+    return errorResponse(res, error.message, 404, error);
+  }
+};
+
 export const deactivateCoupon = async (req, res) => {
   try {
     const { id } = req.params;

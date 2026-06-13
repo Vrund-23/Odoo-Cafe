@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { AdminShell } from "@/components/AdminShell";
 import { useStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
@@ -35,12 +35,12 @@ function PaymentMethodsPage() {
       </Button>
       <div className="grid md:grid-cols-2 gap-4">
         {methods.map((m) => (
-          <Card key={m.id} className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl shadow-md text-white space-y-3">
+          <Card key={m.id} className="p-5 bg-white border border-[#6F4E37]/25 rounded-3xl shadow-md text-[#2B2118] space-y-3">
             <div className="flex items-center justify-between gap-2">
               <Input
                 value={m.name}
                 onChange={(e) => upsert({ ...m, name: e.target.value })}
-                className="max-w-xs bg-[#FAF3E0] text-white border-[#6F4E37]/20 focus:border-[#6F4E37] rounded-xl font-bold"
+                className="max-w-xs bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/20 focus:border-[#6F4E37] rounded-xl font-bold"
               />
               <Button 
                 size="icon" 
@@ -57,10 +57,10 @@ function PaymentMethodsPage() {
                 value={m.type}
                 onValueChange={(v) => upsert({ ...m, type: v })}
               >
-                <SelectTrigger className="w-32 bg-[#FAF3E0] border-[#6F4E37]/20 text-white rounded-xl">
+                <SelectTrigger className="w-32 bg-[#FAF3E0] border-[#6F4E37]/20 text-[#2B2118] rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-white border-[#6F4E37]/35 text-white">
+                <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
                   <SelectItem value="Cash">Cash</SelectItem>
                   <SelectItem value="Card">Card</SelectItem>
                   <SelectItem value="UPI">UPI</SelectItem>
@@ -81,7 +81,7 @@ function PaymentMethodsPage() {
                     value={m.upiId ?? ""}
                     onChange={(e) => upsert({ ...m, upiId: e.target.value })}
                     placeholder="example@upi"
-                    className="bg-[#FAF3E0] text-white border-[#6F4E37]/20 focus:border-[#6F4E37] rounded-xl font-semibold"
+                    className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/20 focus:border-[#6F4E37] rounded-xl font-semibold"
                   />
                 </div>
                 {m.upiId && (

@@ -140,10 +140,15 @@ export const getOrdersBySession = async (sessionId, limit = 50, page = 1) => {
   return { orders, total };
 };
 
-export const updateOrderStatus = async (orderId, status) => {
+export const updateOrderStatus = async (orderId, status, paymentDetails = {}) => {
+  const { paymentMethod, paymentReference } = paymentDetails;
   const order = await prisma.order.update({
     where: { id: orderId },
-    data: { status },
+    data: {
+      status,
+      ...(paymentMethod ? { paymentMethod } : {}),
+      ...(paymentReference ? { paymentReference } : {}),
+    },
     include: {
       orderItems: {
         include: {

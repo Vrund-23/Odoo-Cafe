@@ -9,7 +9,7 @@ export const registerValidator = z.object({
 
 export const loginValidator = z.object({
   email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Invalid credentials'),
+  password: z.string().min(1, 'Password is required'),
 });
 
 export const updateUserValidator = z.object({

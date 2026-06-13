@@ -1,4 +1,4 @@
-﻿import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
 import { FloorPopup } from "@/components/FloorPopup";
@@ -261,7 +261,7 @@ function OrderView() {
 
   if (!order) {
     return (
-      <div className="h-[calc(100vh-4rem)] bg-[#FAF3E0] text-white flex flex-col justify-center items-center select-none">
+      <div className="h-[calc(100vh-4rem)] bg-[#FAF3E0] text-[#2B2118] flex flex-col justify-center items-center select-none">
         <FloorPopup open={showFloor} onSelect={handleSelectTable} onOpenChange={setShowFloor} />
         <Coffee className="w-16 h-16 text-[#6F4E37] mb-4 animate-bounce" />
         <h2 className="text-xl font-extrabold mb-2">Welcome to Odoo Cafe POS</h2>
@@ -277,7 +277,7 @@ function OrderView() {
   const change = parseFloat(cashReceived || "0") - order.total;
 
   return (
-    <div className="grid grid-cols-12 gap-3.5 p-3.5 h-[calc(100vh-4rem)] bg-[#FAF3E0] text-white overflow-hidden select-none">
+    <div className="grid grid-cols-12 gap-3.5 p-3.5 h-[calc(100vh-4rem)] bg-[#FAF3E0] text-[#2B2118] overflow-hidden select-none">
       <FloorPopup open={showFloor} onSelect={handleSelectTable} onOpenChange={setShowFloor} />
 
       {/* COLUMN 1: PRODUCT SELECTION & SIDEBAR */}
@@ -328,7 +328,7 @@ function OrderView() {
                     className="group relative rounded-2xl bg-[#FAF3E0]/30 hover:bg-[#FAF3E0]/70 border border-[#6F4E37]/20 hover:border-[#6F4E37]/55 p-4 text-left transition-all duration-300 hover:-translate-y-0.5 shadow-sm hover:shadow-lg cursor-pointer flex flex-col justify-between h-[105px] select-none"
                   >
                     <div className="w-full flex items-start justify-between">
-                      <div className="font-bold text-zinc-200 group-hover:text-white text-xs leading-snug line-clamp-2 max-w-[85%]">
+                      <div className="font-bold text-[#2B2118] group-hover:text-[#6F4E37] text-xs leading-snug line-clamp-2 max-w-[85%]">
                         {p.name}
                       </div>
                       {cat && (
@@ -360,7 +360,7 @@ function OrderView() {
           {/* Cart Header */}
           <div className="flex items-center justify-between pb-3.5 border-b border-[#6F4E37]/20 shrink-0">
             <div>
-              <div className="text-sm font-extrabold text-white">Order #{order.number}</div>
+              <div className="text-sm font-extrabold text-[#2B2118]">Order #{order.number}</div>
               {customer && (
                 <div className="text-[11px] text-[#6F4E37] mt-0.5 font-bold">
                   Cust: {customer.name}
@@ -397,12 +397,12 @@ function OrderView() {
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className={`font-semibold text-sm transition ${isSelected ? "text-[#6F4E37]" : "text-zinc-200"}`}>
+                        <div className={`font-semibold text-sm transition ${isSelected ? "text-[#6F4E37]" : "text-[#2B2118]"}`}>
                           {p.name}
                         </div>
                         <div className="text-[11px] text-zinc-500 mt-0.5">₹{l.unitPrice} each</div>
                       </div>
-                      <div className="font-extrabold text-sm text-white">
+                      <div className="font-extrabold text-sm text-[#2B2118]">
                         ₹{(l.qty * l.unitPrice).toFixed(0)}
                       </div>
                     </div>
@@ -411,7 +411,7 @@ function OrderView() {
                       {/* Quantity Controls */}
                       <div className="flex items-center gap-1.5">
                         <button
-                          className="h-6 w-6 rounded-lg bg-[#FAF3E0] hover:bg-[#2C2E38] text-zinc-200 flex items-center justify-center transition border border-[#6F4E37]/25 cursor-pointer"
+                          className="h-6 w-6 rounded-lg bg-[#FAF3E0] hover:bg-[#6F4E37]/20 text-[#6F4E37] flex items-center justify-center transition border border-[#6F4E37]/25 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             setLineQty(order.id, l.productId, l.qty - 1);
@@ -420,9 +420,9 @@ function OrderView() {
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="font-extrabold text-xs w-6 text-white text-center">{l.qty}</span>
+                        <span className="font-extrabold text-xs w-6 text-[#2B2118] text-center">{l.qty}</span>
                         <button
-                          className="h-6 w-6 rounded-lg bg-[#FAF3E0] hover:bg-[#2C2E38] text-zinc-200 flex items-center justify-center transition border border-[#6F4E37]/25 cursor-pointer"
+                          className="h-6 w-6 rounded-lg bg-[#FAF3E0] hover:bg-[#6F4E37]/20 text-[#6F4E37] flex items-center justify-center transition border border-[#6F4E37]/25 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             setLineQty(order.id, l.productId, l.qty + 1);
@@ -511,11 +511,11 @@ function OrderView() {
           <div className="space-y-1.5 text-xs">
             <div className="flex justify-between text-[#6F4E37]/60 font-medium">
               <span>Sub total</span>
-              <span className="font-bold text-zinc-200">₹{order.subtotal.toFixed(0)}</span>
+              <span className="font-bold text-[#2B2118]">₹{order.subtotal.toFixed(0)}</span>
             </div>
             <div className="flex justify-between text-[#6F4E37]/60 font-medium">
               <span>Tax (GST 5%)</span>
-              <span className="font-bold text-zinc-200">₹{order.tax.toFixed(0)}</span>
+              <span className="font-bold text-[#2B2118]">₹{order.tax.toFixed(0)}</span>
             </div>
             {order.discountTotal > 0 && (
               <div className="flex justify-between text-emerald-400 font-bold">
@@ -523,7 +523,7 @@ function OrderView() {
                 <span>-₹{order.discountTotal.toFixed(0)}</span>
               </div>
             )}
-            <div className="flex justify-between font-extrabold text-sm pt-2 border-t border-[#6F4E37]/10 text-white">
+            <div className="flex justify-between font-extrabold text-sm pt-2 border-t border-[#6F4E37]/10 text-[#2B2118]">
               <span>Total</span>
               <span className="text-[#6F4E37] text-base">₹{order.total.toFixed(0)}</span>
             </div>
@@ -571,7 +571,7 @@ function OrderView() {
                     placeholder="Enter cash amount"
                     value={cashReceived}
                     onChange={(e) => setCashReceived(e.target.value)}
-                    className="bg-[#FAF3E0] text-white border-[#6F4E37]/20 h-9 rounded-xl focus:border-[#6F4E37] focus:bg-white"
+                    className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/20 h-9 rounded-xl focus:border-[#6F4E37] focus:bg-white"
                   />
                   {cashReceived && change >= 0 && (
                     <div className="text-xs text-[#6F4E37]/80 flex justify-between items-center bg-[#FAF3E0]/50 px-2.5 py-1 rounded-lg border border-[#6F4E37]/10">
@@ -589,7 +589,7 @@ function OrderView() {
                     placeholder="Reference..."
                     value={cardRef}
                     onChange={(e) => setCardRef(e.target.value)}
-                    className="bg-[#FAF3E0] text-white border-[#6F4E37]/20 h-9 rounded-xl focus:border-[#6F4E37] focus:bg-white"
+                    className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/20 h-9 rounded-xl focus:border-[#6F4E37] focus:bg-white"
                   />
                 </div>
               )}
@@ -627,7 +627,7 @@ function OrderView() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => window.print()}
-                    className="flex-1 bg-[#FAF3E0] hover:bg-[#2C2E38] text-zinc-200 font-bold py-2.5 px-3 rounded-xl text-xs transition border border-[#6F4E37]/25 flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="flex-1 bg-[#FAF3E0] hover:bg-[#6F4E37]/20 text-[#6F4E37] font-bold py-2.5 px-3 rounded-xl text-xs transition border border-[#6F4E37]/25 flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Printer className="w-3.5 h-3.5" /> Print
                   </button>
@@ -669,7 +669,7 @@ function OrderView() {
                   className={`font-extrabold text-sm rounded-lg py-2 border transition cursor-pointer flex items-center justify-center outline-none select-none ${
                     key === "⌫"
                       ? "bg-[#C63D2F] hover:bg-[#C63D2F]/90 active:bg-red-700 text-white border-[#C63D2F]/30"
-                      : "bg-[#FAF3E0] hover:bg-[#2C2E38] active:bg-[#6F4E37]/30 text-white border-[#6F4E37]/20 hover:border-[#6F4E37]/40"
+                      : "bg-[#FAF3E0] hover:bg-[#6F4E37]/20 hover:text-[#6F4E37] active:bg-[#6F4E37]/30 text-[#2B2118] border-[#6F4E37]/20 hover:border-[#6F4E37]/40"
                   }`}
                 >
                   {key}
@@ -716,16 +716,16 @@ function OrderView() {
 
       {/* Coupon dialog */}
       <Dialog open={couponOpen} onOpenChange={setCouponOpen}>
-        <DialogContent className="bg-white border border-[#6F4E37]/30 text-white max-w-sm rounded-3xl">
+        <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#2B2118] max-w-sm rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-white font-bold">Apply Coupon</DialogTitle>
+            <DialogTitle className="text-[#6F4E37] font-bold">Apply Coupon</DialogTitle>
           </DialogHeader>
           <div className="py-2.5">
             <Input
               placeholder="Enter coupon code (e.g. SUMMER20)"
               value={couponCode}
               onChange={(e) => setCouponCode(e.target.value)}
-              className="bg-[#FAF3E0] text-white border-[#6F4E37]/30 rounded-xl"
+              className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/30 rounded-xl"
             />
           </div>
           <DialogFooter className="flex gap-2">
@@ -741,9 +741,9 @@ function OrderView() {
 
       {/* Customer dialog */}
       <Dialog open={customerOpen} onOpenChange={setCustomerOpen}>
-        <DialogContent className="bg-white border border-[#6F4E37]/30 text-white max-w-sm rounded-3xl">
+        <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#2B2118] max-w-sm rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-white font-bold">Assign Customer</DialogTitle>
+            <DialogTitle className="text-[#6F4E37] font-bold">Assign Customer</DialogTitle>
           </DialogHeader>
           <div className="max-h-72 overflow-y-auto space-y-1.5 py-2">
             {customers.map((c) => (
@@ -755,7 +755,7 @@ function OrderView() {
                 }}
                 className="w-full text-left p-3 hover:bg-[#FAF3E0] border border-transparent hover:border-[#6F4E37]/30 rounded-xl text-sm transition cursor-pointer"
               >
-                <div className="font-extrabold text-zinc-200">{c.name}</div>
+                <div className="font-extrabold text-[#2B2118]">{c.name}</div>
                 <div className="text-xs text-zinc-500 mt-0.5">{c.email} • {c.phone}</div>
               </button>
             ))}
@@ -770,9 +770,9 @@ function OrderView() {
 
       {/* Email dialog */}
       <Dialog open={emailOpen} onOpenChange={setEmailOpen}>
-        <DialogContent className="bg-white border border-[#6F4E37]/30 text-white max-w-sm rounded-3xl">
+        <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#2B2118] max-w-sm rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-white font-bold">Send Receipt via Email</DialogTitle>
+            <DialogTitle className="text-[#6F4E37] font-bold">Send Receipt via Email</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 py-2.5">
             <Label className="text-xs text-[#6F4E37]/60">Email Address</Label>
@@ -781,7 +781,7 @@ function OrderView() {
               placeholder="customer@example.com"
               value={emailVal || customer?.email || ""}
               onChange={(e) => setEmailVal(e.target.value)}
-              className="bg-[#FAF3E0] text-white border-[#6F4E37]/30 rounded-xl"
+              className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/30 rounded-xl"
             />
           </div>
           <DialogFooter className="flex gap-2">

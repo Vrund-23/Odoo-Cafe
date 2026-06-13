@@ -1,5 +1,6 @@
 import * as orderService from '../services/order.service.js';
 import * as kitchenService from '../services/kitchen.service.js';
+import * as productService from '../services/product.service.js';
 import { successResponse, errorResponse, paginatedResponse } from '../utils/response.util.js';
 
 export const createOrder = async (req, res) => {
@@ -8,7 +9,7 @@ export const createOrder = async (req, res) => {
 
     for (const item of req.body.items) {
       if (item.productId) {
-        const product = await require('../services/product.service.js').getProductById(item.productId);
+        const product = await productService.getProductById(item.productId);
         if (product.showInKds) {
           await kitchenService.createKitchenOrder(
             order.id,
@@ -49,8 +50,8 @@ export const getOrdersBySession = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
-    const order = await orderService.updateOrderStatus(id, status);
+    const { status, paymentMethod, paymentReference } = req.body;
+    const order = await orderService.updateOrderStatus(id, status, { paymentMethod, paymentReference });
     return successResponse(res, order, 'Order status updated successfully');
   } catch (error) {
     return errorResponse(res, error.message, 400, error);
