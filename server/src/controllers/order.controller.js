@@ -61,6 +61,47 @@ export const updateOrderStatus = async (req, res) => {
     const { id } = req.params;
     const { status, paymentMethod, paymentReference } = req.body;
     const order = await orderService.updateOrderStatus(id, status, { paymentMethod, paymentReference });
+
+    // Auto-send receipt if order is paid and customer has an email
+    if (status === 'PAID') {
+      prisma.order.findUnique({
+        where: { id },
+        include: {
+          customer: true,
+          table: true,
+          orderItems: {
+            include: { product: { select: { id: true, name: true, price: true } } },
+          },
+        },
+      }).then(async (fullOrder) => {
+        if (fullOrder && fullOrder.customer?.email) {
+          const items = fullOrder.orderItems.map((oi) => ({
+            name: oi.product?.name || 'Item',
+            qty: Number(oi.quantity),
+            unitPrice: Number(oi.unitPrice),
+          }));
+          const tableNumber = fullOrder.table?.tableNumber
+            ? fullOrder.table.tableNumber.replace(/\D/g, '') || fullOrder.table.tableNumber
+            : null;
+
+          await sendReceiptEmail({
+            to: fullOrder.customer.email,
+            customerName: fullOrder.customer.name || 'Customer',
+            orderNumber: fullOrder.orderNumber,
+            tableNumber,
+            items,
+            subtotal: Number(fullOrder.subtotal),
+            tax: Number(fullOrder.taxAmount),
+            discount: Number(fullOrder.discountAmount),
+            total: Number(fullOrder.total),
+            paymentMethod: fullOrder.paymentMethod || 'Cash',
+            paidAt: fullOrder.updatedAt,
+          });
+          console.log(`Auto-receipt sent to ${fullOrder.customer.email}`);
+        }
+      }).catch(err => console.error("Auto email failed:", err));
+    }
+
     return successResponse(res, order, 'Order status updated successfully');
   } catch (error) {
     return errorResponse(res, error.message, 400, error);

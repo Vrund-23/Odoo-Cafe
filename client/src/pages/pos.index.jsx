@@ -71,10 +71,7 @@ export default function OrderView() {
   const [numpadMode, setNumpadMode] = useState("qty");
   const [numpadBuffer, setNumpadBuffer] = useState("");
 
-  // Open floor popup if no table
-  useEffect(() => {
-    if (!currentTableId) setShowFloor(true);
-  }, [currentTableId]);
+  // Floor popup can be triggered manually from the header or reset button
 
   // Ensure draft order exists for selected table
   useEffect(() => {
@@ -136,11 +133,21 @@ export default function OrderView() {
   };
 
   const handleAdd = (pid) => {
-    let targetOrderId = order?.id;
+    const targetOrderId = order?.id;
+    
     if (!targetOrderId) {
-      targetOrderId = createDraftOrder(currentTableId || "walk-in", null);
-      setDraftOrder(targetOrderId);
+      toast.error("Please select a Table and Customer first.");
+      return;
     }
+    if (!order.tableId || order.tableId === "walk-in") {
+      toast.error("Please select a Table first.");
+      return;
+    }
+    if (!order.customerId) {
+      toast.error("Please assign a Customer first.");
+      return;
+    }
+
     addLine(targetOrderId, pid);
     updateOrder(targetOrderId, { sentToKitchen: false });
     setSelectedLineProductId(pid);
@@ -301,16 +308,16 @@ export default function OrderView() {
       {/* COLUMN 1: PRODUCT SELECTION & SIDEBAR */}
       <div className="col-span-6 flex overflow-hidden border border-[#6F4E37]/20 bg-white rounded-3xl shadow-md p-3">
         {/* Vertical Categories Sidebar */}
-        <div className="w-[105px] border-r border-[#6F4E37]/20 bg-white py-1 px-1.5 flex flex-col gap-2.5 overflow-y-auto scrollbar-none shrink-0 pr-3">
+        <div className="w-[130px] border-r border-[#6F4E37]/20 bg-white py-2 px-2 flex flex-col gap-3 overflow-y-auto scrollbar-none shrink-0 pr-3">
           <button
             onClick={() => setActiveCat("all")}
-            className={`py-3 px-1 rounded-2xl text-center flex flex-col items-center justify-center gap-1.5 transition border cursor-pointer select-none ${
+            className={`py-3.5 px-2 rounded-2xl text-center flex flex-col items-center justify-center transition border cursor-pointer select-none ${
               activeCat === "all"
                 ? "bg-[#6F4E37] text-white border-[#6F4E37] shadow-md shadow-[#6F4E37]/15"
                 : "border-[#6F4E37]/30 text-[#6F4E37] hover:bg-[#6F4E37]/10"
             }`}
           >
-            <span className="text-[10px] tracking-wider font-extrabold uppercase">All Items</span>
+            <span className="text-[10px] leading-snug tracking-wide font-extrabold uppercase whitespace-normal break-words">All Items</span>
           </button>
           {categories.map((c) => {
             const isActive = activeCat === c.id;
@@ -318,14 +325,14 @@ export default function OrderView() {
               <button
                 key={c.id}
                 onClick={() => setActiveCat(c.id)}
-                className="py-3 px-1 rounded-2xl text-center flex flex-col items-center justify-center gap-1.5 transition border cursor-pointer select-none"
+                className="py-3.5 px-2 rounded-2xl text-center flex flex-col items-center justify-center transition border cursor-pointer select-none"
                 style={
                   isActive
                     ? { background: c.color, color: "white", borderColor: c.color }
                     : { color: c.color, borderColor: `${c.color}50` }
                 }
               >
-                <span className="text-[10px] tracking-wider font-extrabold uppercase truncate max-w-full px-0.5">
+                <span className="text-[10px] leading-snug tracking-wide font-extrabold uppercase whitespace-normal break-words">
                   {c.name}
                 </span>
               </button>
@@ -505,7 +512,7 @@ export default function OrderView() {
           )}
 
           {/* Quick action buttons row */}
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-2 gap-1.5">
             <button
               onClick={() => setCustomerOpen(true)}
               className="bg-[#FAF3E0] hover:bg-[#2C2E38] text-[#6F4E37]/80 text-[11px] font-bold py-2 px-1 rounded-xl transition border border-[#6F4E37]/25 flex items-center justify-center gap-1 cursor-pointer"
@@ -519,13 +526,6 @@ export default function OrderView() {
             >
               <Tag className="w-3.5 h-3.5 text-[#6F4E37]" />
               Discount
-            </button>
-            <button
-              onClick={() => setEmailOpen(true)}
-              className="bg-[#FAF3E0] hover:bg-[#2C2E38] text-[#6F4E37]/80 text-[11px] font-bold py-2 px-1 rounded-xl transition border border-[#6F4E37]/25 flex items-center justify-center gap-1 cursor-pointer"
-            >
-              <Mail className="w-3.5 h-3.5 text-[#6F4E37]" />
-              Send
             </button>
           </div>
 

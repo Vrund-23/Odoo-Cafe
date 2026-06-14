@@ -12,8 +12,8 @@ import {
 
 export default function AuthPage() {
   const [selectedRole, setSelectedRole] = useState("admin");
-  const [email, setEmail] = useState("admin@cafe.com");
-  const [password, setPassword] = useState("admin");
+  const [email, setEmail] = useState("admin1@odoocafe.com");
+  const [password, setPassword] = useState("password123");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -30,11 +30,11 @@ export default function AuthPage() {
   const selectRole = (role) => {
     setSelectedRole(role);
     if (role === "admin") {
-      setEmail("admin@cafe.com");
-      setPassword("admin");
+      setEmail("admin1@odoocafe.com");
+      setPassword("password123");
     } else {
-      setEmail("eric@cafe.com");
-      setPassword("eric");
+      setEmail("emp1@odoocafe.com");
+      setPassword("password123");
     }
   };
 
@@ -256,10 +256,10 @@ export default function AuthPage() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { role: "Admin",      label: "admin",      email: "admin@cafe.com", password: "admin",  roleKey: "admin" },
-                { role: "Employee",   label: "employee",   email: "eric@cafe.com",  password: "eric",   roleKey: "employee" },
-                { role: "Employee 1", label: "employee-1", email: "emp1@cafe.com",  password: "123qwe", roleKey: "employee" },
-                { role: "Employee 2", label: "employee-2", email: "emp2@cafe.com",  password: "123qwe", roleKey: "employee" },
+                { role: "Admin 1",    label: "admin1",     email: "admin1@odoocafe.com", password: "password123", roleKey: "admin" },
+                { role: "Admin 2",    label: "admin2",     email: "admin2@odoocafe.com", password: "password123", roleKey: "admin" },
+                { role: "Employee 1", label: "employee-1", email: "emp1@odoocafe.com",   password: "password123", roleKey: "employee" },
+                { role: "Employee 2", label: "employee-2", email: "emp2@odoocafe.com",   password: "password123", roleKey: "employee" },
               ].map(({ role, email: e, password: p, roleKey }) => (
                 <button
                   key={e}

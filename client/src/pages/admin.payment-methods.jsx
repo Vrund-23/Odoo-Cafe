@@ -111,7 +111,7 @@ export default function PaymentMethodsPage() {
     const newMethod = {
       id: newId,
       name: "New Method",
-      type: "Cash",
+      type: "CASH",
       active: false,
       isNew: true,
     };
@@ -173,7 +173,6 @@ export default function PaymentMethodsPage() {
                     <th className="py-3 px-4">Payment method Name</th>
                     <th className="py-3 px-4">Type</th>
                     <th className="py-3 px-4">Id</th>
-                    <th className="py-3 px-4">Activate</th>
                     <th className="py-3 px-4 w-16"></th>
                   </tr>
                 </thead>
@@ -197,17 +196,6 @@ export default function PaymentMethodsPage() {
                       </td>
                       <td className="py-3 px-4 text-zinc-500 text-xs">
                         {m.type === "UPI" ? m.upiId : ""}
-                      </td>
-                      <td className="py-3 px-4">
-                        <Switch 
-                          checked={m.active} 
-                          onCheckedChange={(v) => {
-                            setMethods(prev => prev.map(x => x.id === m.id ? { ...x, active: v } : x));
-                            save({ ...m, active: v });
-                          }} 
-                          onClick={(e) => e.stopPropagation()}
-                          className="data-[state=checked]:bg-[#6F4E37]"
-                        />
                       </td>
                       <td className="py-3 px-4">
                         <Button 
@@ -266,24 +254,11 @@ export default function PaymentMethodsPage() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="bg-white border-[#6F4E37]/35 text-[#2B2118]">
-                          <SelectItem value="Cash">Cash</SelectItem>
-                          <SelectItem value="Card">Card</SelectItem>
+                          <SelectItem value="CASH">CASH</SelectItem>
+                          <SelectItem value="CARD">CARD</SelectItem>
                           <SelectItem value="UPI">UPI</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <label className="text-sm font-bold text-[#2B2118]">Activate</label>
-                      <Switch 
-                        checked={selectedMethod.active} 
-                        onCheckedChange={(v) => {
-                          updateSelected("active", v);
-                          const m = methods.find(x => x.id === selectedId);
-                          if (m) save({ ...m, active: v });
-                        }} 
-                        className="data-[state=checked]:bg-[#6F4E37]"
-                      />
                     </div>
                   </div>
 

@@ -30,11 +30,7 @@ export default function OrdersPage() {
     if (!q) return true;
     const c = customers.find((x) => x.id === o.customerId);
     const s = q.toLowerCase();
-    return (
-      o.number.toLowerCase().includes(s) ||
-      c?.name.toLowerCase().includes(s) ||
-      format(new Date(o.createdAt), "yyyy-MM-dd").includes(s)
-    );
+    return c?.name?.toLowerCase().includes(s);
   });
 
   const order = orders.find((o) => o.id === selected);
@@ -54,7 +50,7 @@ export default function OrdersPage() {
         <div className="relative w-64">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
           <Input
-            placeholder="Search by name, # or date..."
+            placeholder="Search by customer name..."
             value={q}
             onChange={(e) => setQ(e.target.value)}
             className="pl-9 bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/30 focus:border-[#6F4E37] focus:bg-white rounded-xl"
@@ -79,17 +75,32 @@ export default function OrdersPage() {
               {filtered.map((o) => {
                 const c = customers.find((x) => x.id === o.customerId);
                 const t = useStore.getState().tables.find((x) => x.id === o.tableId);
+                
+                // Safe date parsing
+                let dateStr = "-";
+                try {
+                  if (o.createdAt) {
+                    const d = new Date(o.createdAt);
+                    if (!isNaN(d.getTime())) {
+                      dateStr = format(d, "M/d HH:mm");
+                    }
+                  }
+                } catch (e) {}
+
+                const orderNum = o.number || (o.id ? o.id.toString().slice(0,6) : "NEW");
+                const totalAmt = (typeof o.total === 'number' ? o.total : parseFloat(o.total) || 0).toFixed(2);
+
                 return (
                   <tr
-                    key={o.id}
+                    key={o.id || Math.random()}
                     className="border-b border-[#6F4E37]/10 last:border-0 hover:bg-[#FAF3E0]/20 transition-all duration-200 cursor-pointer"
-                    onClick={() => setSelected(o.id)}
+                    onClick={() => o.id && setSelected(o.id)}
                   >
-                    <td className="p-3 text-[#6F4E37]/80">{format(new Date(o.createdAt), "M/d HH:mm")}</td>
-                    <td className="p-3 font-mono font-bold text-[#6F4E37]">#{o.number || o.id.slice(0,6)}</td>
+                    <td className="p-3 text-[#6F4E37]/80">{dateStr}</td>
+                    <td className="p-3 font-mono font-bold text-[#6F4E37]">#{orderNum}</td>
                     <td className="p-3 font-bold text-[#6F4E37]">{t ? `T-${t.number}` : "-"}</td>
                     <td className="p-3 text-[#2B2118] font-[#2B2118] font-semibold">{c?.name ?? "-"}</td>
-                    <td className="p-3 text-right font-extrabold text-[#6F4E37]">₹{o.total.toFixed(2)}</td>
+                    <td className="p-3 text-right font-extrabold text-[#6F4E37]">₹{totalAmt}</td>
                     <td className="p-3">
                       <Badge
                         className={`rounded-full px-2 py-0.5 text-xs font-bold border ${
@@ -100,7 +111,7 @@ export default function OrdersPage() {
                               : "bg-rose-500/10 border-rose-500/30 text-rose-400"
                         }`}
                       >
-                        {o.status}
+                        {o.status || "Unknown"}
                       </Badge>
                     </td>
                   </tr>
@@ -108,7 +119,7 @@ export default function OrdersPage() {
               })}
               {!filtered.length && (
                 <tr>
-                  <td colSpan={5} className="p-10 text-center text-zinc-500 font-semibold">
+                  <td colSpan={6} className="p-10 text-center text-zinc-500 font-semibold">
                     No orders found.
                   </td>
                 </tr>
@@ -121,13 +132,23 @@ export default function OrdersPage() {
       <Dialog open={!!order} onOpenChange={(v) => !v && setSelected(null)}>
         <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#2B2118] max-w-md rounded-3xl">
           <DialogHeader>
-            <DialogTitle className="text-[#6F4E37] font-extrabold text-lg">Order #{order?.number}</DialogTitle>
+            <DialogTitle className="text-[#6F4E37] font-extrabold text-lg">Order #{order?.number || (order?.id ? order.id.toString().slice(0,6) : "NEW")}</DialogTitle>
           </DialogHeader>
           {order && (
             <div className="space-y-4 py-2 text-sm text-[#6F4E37]/80">
               <div className="flex justify-between border-b border-[#6F4E37]/10 pb-2">
                 <span>Date:</span>
-                <span className="font-bold text-[#2B2118]">{format(new Date(order.createdAt), "M/d HH:mm")}</span>
+                <span className="font-bold text-[#2B2118]">
+                  {(() => {
+                    try {
+                      if (order.createdAt) {
+                        const d = new Date(order.createdAt);
+                        if (!isNaN(d.getTime())) return format(d, "M/d HH:mm");
+                      }
+                    } catch (e) {}
+                    return "-";
+                  })()}
+                </span>
               </div>
               <div className="flex justify-between border-b border-[#6F4E37]/10 pb-2">
                 <span>Customer:</span>
@@ -137,7 +158,7 @@ export default function OrdersPage() {
               </div>
               <div className="flex justify-between border-b border-[#6F4E37]/10 pb-2">
                 <span>Amount:</span>
-                <span className="font-extrabold text-[#6F4E37]">₹{order.total.toFixed(2)}</span>
+                <span className="font-extrabold text-[#6F4E37]">₹{(typeof order.total === 'number' ? order.total : parseFloat(order.total) || 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between border-b border-[#6F4E37]/10 pb-2">
                 <span>Status:</span>
@@ -150,20 +171,22 @@ export default function OrdersPage() {
                         : "bg-rose-500/10 border-rose-500/30 text-rose-400"
                   }`}
                 >
-                  {order.status}
+                  {order.status || "Unknown"}
                 </Badge>
               </div>
               <div className="pt-2">
                 <div className="font-bold text-[#6F4E37] mb-2">Products:</div>
                 <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {order.lines.map((l) => {
+                  {(order.lines || []).map((l) => {
                     const p = products.find((x) => x.id === l.productId);
+                    const lineQty = typeof l.qty === 'number' ? l.qty : parseFloat(l.qty) || 0;
+                    const linePrice = typeof l.unitPrice === 'number' ? l.unitPrice : parseFloat(l.unitPrice) || 0;
                     return (
-                      <div key={l.productId} className="flex justify-between bg-[#FAF3E0]/40 p-2 rounded-xl border border-[#6F4E37]/10">
+                      <div key={l.productId || Math.random()} className="flex justify-between bg-[#FAF3E0]/40 p-2 rounded-xl border border-[#6F4E37]/10">
                         <span className="text-[#2B2118]">
-                          {p?.name} <span className="text-xs text-[#6F4E37] font-bold">× {l.qty}</span>
+                          {p?.name || "Unknown Product"} <span className="text-xs text-[#6F4E37] font-bold">× {lineQty}</span>
                         </span>
-                        <span className="font-bold text-[#2B2118]">₹{(l.qty * l.unitPrice).toFixed(2)}</span>
+                        <span className="font-bold text-[#2B2118]">₹{(lineQty * linePrice).toFixed(2)}</span>
                       </div>
                     );
                   })}

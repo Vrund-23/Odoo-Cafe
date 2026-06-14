@@ -2,7 +2,9 @@ import prisma from '../config/database.js';
 import { generateOrderNumber } from '../utils/order.util.js';
 
 export const createOrder = async (data) => {
-  const { sessionId, tableId, customerId, employeeId, items } = data;
+  console.log("createOrder incoming data:", JSON.stringify(data, null, 2));
+  const { sessionId, tableId, customerId, items } = data;
+  let { employeeId } = data;
 
   const session = await prisma.session.findUnique({
     where: { id: sessionId },
@@ -10,6 +12,17 @@ export const createOrder = async (data) => {
 
   if (!session) {
     throw new Error('Session not found');
+  }
+
+  let userExists = null;
+  if (employeeId) {
+    userExists = await prisma.user.findUnique({ where: { id: String(employeeId) } }).catch(() => null);
+  }
+
+  if (!userExists) {
+    const defaultUser = await prisma.user.findFirst();
+    if (!defaultUser) throw new Error("No users found to assign to order");
+    employeeId = defaultUser.id;
   }
 
   let subtotal = 0;
@@ -48,7 +61,7 @@ export const createOrder = async (data) => {
 
   const order = await prisma.order.create({
     data: {
-      orderNumber: generateOrderNumber(),
+      orderNumber: await generateOrderNumber(),
       sessionId,
       tableId,
       customerId,

@@ -186,6 +186,20 @@ export const useStore = create(
 
           // Fetch fresh orders from backend
           await get().fetchOrders().catch((err) => console.error("Orders bootstrap fetch failed:", err));
+
+          // Migrate legacy draft order numbers
+          set((state) => ({
+            orders: state.orders.map(o => {
+              if (o.status === "Draft" && o.number && !o.number.startsWith("ORD-")) {
+                const now = new Date(o.createdAt || Date.now());
+                const d = String(now.getDate()).padStart(2, '0');
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const y = now.getFullYear();
+                return { ...o, number: `ORD-${d}${m}${y}${o.number.padStart(4, '0')}` };
+              }
+              return o;
+            })
+          }));
           
           // Connect real-time socket and setup listeners
           socket.connect();
@@ -356,7 +370,12 @@ export const useStore = create(
       // ── Orders (local for now, sync on pay) ───────────────
       createDraftOrder: (tableId, customerId = null) => {
         const id = uid();
-        const number = pad(get().orders.length + 1);
+        const now = new Date();
+        const d = String(now.getDate()).padStart(2, '0');
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const y = now.getFullYear();
+        const sequence = String(get().orders.length + 1).padStart(4, "0");
+        const number = `ORD-${d}${m}${y}${sequence}`;
         const o = {
           id, number, tableId, customerId,
           lines: [], subtotal: 0, tax: 0,
@@ -541,6 +560,7 @@ export const useStore = create(
             savedOrder = await orderApi.create({
               sessionId,
               tableId: o.tableId,
+              customerId: o.customerId,
               employeeId: o.employeeId ?? get().currentUserId,
               items: o.lines.map((l) => ({ productId: l.productId, quantity: l.qty, unitPrice: l.unitPrice })),
             });
@@ -561,6 +581,7 @@ export const useStore = create(
                 savedOrder = await orderApi.create({
                   sessionId: newSessionId,
                   tableId: o.tableId,
+                  customerId: o.customerId,
                   employeeId: o.employeeId ?? get().currentUserId,
                   items: o.lines.map((l) => ({ productId: l.productId, quantity: l.qty, unitPrice: l.unitPrice })),
                 });
@@ -678,11 +699,13 @@ export const useStore = create(
             sessionId: o.sessionId,
             tableId: o.tableId,
             customerId: o.customerId,
+            employeeId: o.employeeId,
             status: o.status === "PAID" ? "Paid" : o.status === "CANCELLED" ? "Cancelled" : "Draft",
             subtotal: parseFloat(o.subtotal) || 0,
             tax: parseFloat(o.taxAmount) || 0,
             discountTotal: parseFloat(o.discountAmount) || 0,
             total: parseFloat(o.total) || 0,
+            createdAt: o.createdAt ? new Date(o.createdAt).getTime() : Date.now(),
             sentToKitchen: o.kitchenOrders && o.kitchenOrders.length > 0,
             lines: (o.orderItems || []).map(item => ({
               productId: item.productId,
@@ -778,7 +801,7 @@ export const useStore = create(
       },
     }),
     {
-      name: "cafe-pos-v2",  // bumped version — clears old incompatible cache
+      name: "cafe-pos-v3",  // bumped version — clears old incompatible cache
       partialize: (s) => ({
         currentUserId: s.currentUserId,
         currentTableId: s.currentTableId,

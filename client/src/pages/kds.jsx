@@ -80,17 +80,22 @@ export default function KDSPage() {
     Completed: tickets.filter((t) => t.stage === "Completed").length,
   };
 
+  const hasProdFilter = prodFilter.length > 0;
+  const hasCatFilter = catFilter.length > 0;
+
   let filtered = tab === "all" ? tickets : tickets.filter((t) => t.stage === tab);
-  if (q) filtered = filtered.filter((t) => t.orderNumber.includes(q));
-  if (prodFilter.length)
-    filtered = filtered.filter((t) => t.items.some((i) => prodFilter.includes(i.productId)));
-  if (catFilter.length)
-    filtered = filtered.filter((t) =>
-      t.items.some((i) => {
-        const p = products.find((p) => p.id === i.productId);
-        return p && catFilter.includes(p.categoryId);
-      }),
-    );
+  if (q) filtered = filtered.filter((t) => t.orderNumber?.includes(q));
+  
+  if (hasProdFilter || hasCatFilter) {
+    filtered = filtered.filter((t) => {
+      return t.items.some((i) => {
+        const matchProd = hasProdFilter && prodFilter.includes(i.productId);
+        const p = products.find((x) => x.id === i.productId);
+        const matchCat = hasCatFilter && p && catFilter.includes(p.categoryId);
+        return matchProd || matchCat;
+      });
+    });
+  }
 
   const toggleArr = (arr, v, set) =>
     set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
