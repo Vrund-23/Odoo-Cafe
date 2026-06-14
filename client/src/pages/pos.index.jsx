@@ -71,7 +71,10 @@ export default function OrderView() {
   const [numpadMode, setNumpadMode] = useState("qty");
   const [numpadBuffer, setNumpadBuffer] = useState("");
 
-
+  // Open floor popup if no table
+  useEffect(() => {
+    if (!currentTableId) setShowFloor(true);
+  }, [currentTableId]);
 
   // Ensure draft order exists for selected table
   useEffect(() => {
@@ -151,104 +154,23 @@ export default function OrderView() {
     setCouponCode("");
   };
 
-  const doPay = async () => {
+  const doPay = () => {
     if (!order || !selectedPM) return toast.error("Select payment method");
     const pm = paymentMethods.find((p) => p.id === selectedPM);
     if (!pm) return;
     let amount = order.total;
     let ref;
-
-    if (pm.type.toUpperCase() === "CASH") {
+    if (pm.type === "Cash") {
       const v = parseFloat(cashReceived);
-      const roundedTotal = Math.round(order.total);
-      if (!v || v < roundedTotal) return toast.error("Insufficient cash");
+      if (!v || v < order.total) return toast.error("Insufficient cash");
       amount = v;
-      payOrder(order.id, selectedPM, amount, ref);
-      toast.success("Payment successful");
-      setPayDone(true);
-    } else if (pm.type.toUpperCase() === "CARD" || pm.type.toUpperCase() === "UPI") {
-      // Trigger Razorpay Flow for both Card and UPI (QR)
-      try {
-        toast.loading("Initializing payment...", { id: "rzp-init" });
-        const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/payment/razorpay/order`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${useStore.getState().authToken}`
-          },
-          body: JSON.stringify({ amount: order.total, receipt: `order_${order.id}` })
-        });
-        const json = await res.json();
-        toast.dismiss("rzp-init");
-
-        if (!res.ok) throw new Error(json.message || "Failed to initialize payment");
-
-        const rzpOrder = json.data.order;
-
-        // If the user selected UPI specifically, we can ask Razorpay to prioritize it
-        const isUPI = pm.type.toUpperCase() === "UPI";
-
-        const options = {
-          key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_T1D3g5Y4TUxnUO",
-          amount: rzpOrder.amount,
-          currency: "INR",
-          name: "Odoo Cafe",
-          description: `Payment for Order #${order.number}`,
-          order_id: rzpOrder.id,
-          handler: async function (response) {
-            try {
-              toast.loading("Verifying payment...", { id: "rzp-verify" });
-              const verifyRes = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/payment/razorpay/verify`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${useStore.getState().authToken}`
-                },
-                body: JSON.stringify({
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature
-                })
-              });
-              const verifyJson = await verifyRes.json();
-              toast.dismiss("rzp-verify");
-
-              if (!verifyRes.ok) throw new Error(verifyJson.message || "Payment verification failed");
-
-              payOrder(order.id, selectedPM, amount, response.razorpay_payment_id);
-              toast.success("Payment successful");
-              setPayDone(true);
-            } catch (err) {
-              toast.dismiss("rzp-verify");
-              toast.error(err.message);
-            }
-          },
-          prefill: {
-            name: "Customer",
-            email: "test@cafe.com",
-            contact: "9999999999"
-          },
-          theme: {
-            color: "#6F4E37"
-          }
-        };
-
-        const rzp = new window.Razorpay(options);
-        rzp.on("payment.failed", function (response) {
-          toast.error(`Payment Failed: ${response.error.description}`);
-        });
-        rzp.open();
-
-      } catch (err) {
-        toast.dismiss("rzp-init");
-        toast.error(err.message);
-      }
-    } else {
-      // UPI or other
-      payOrder(order.id, selectedPM, amount, ref);
-      toast.success("Payment successful");
-      setPayDone(true);
+    } else if (pm.type === "Card") {
+      if (!cardRef) return toast.error("Enter transaction reference");
+      ref = cardRef;
     }
+    payOrder(order.id, selectedPM, amount, ref);
+    toast.success("Payment successful");
+    setPayDone(true);
   };
 
   const reset = () => {
@@ -368,27 +290,26 @@ export default function OrderView() {
   }
 
   const selectedPMObj = paymentMethods.find((p) => p.id === selectedPM);
-  const roundedTotal = Math.round(order.total);
-  const change = parseFloat(cashReceived || "0") - roundedTotal;
+  const change = parseFloat(cashReceived || "0") - order.total;
 
   return (
-    <div className="grid grid-cols-12 gap-4 p-4 h-[calc(100vh-4rem)] bg-transparent text-[#6F4E37] overflow-hidden select-none">
+    <div className="grid grid-cols-12 gap-3.5 p-3.5 h-[calc(100vh-4rem)] bg-[#FAF3E0] text-[#2B2118] overflow-hidden select-none">
       <FloorPopup open={showFloor} onSelect={handleSelectTable} onOpenChange={setShowFloor} />
       <CustomerCaptureModal open={captureOpen} onOpenChange={setCaptureOpen} tableId={pendingTable} onSuccess={handleCustomerCaptured} />
 
       {/* COLUMN 1: PRODUCT SELECTION & SIDEBAR */}
-      <div className="col-span-6 flex overflow-hidden border border-[#6F4E37]/30 bg-white rounded-xl shadow-sm p-3">
+      <div className="col-span-6 flex overflow-hidden border border-[#6F4E37]/20 bg-white rounded-3xl shadow-md p-3">
         {/* Vertical Categories Sidebar */}
-        <div className="w-[105px] border-r border-[#6F4E37]/20 bg-white py-1 flex flex-col gap-2 overflow-y-auto scrollbar-none shrink-0 pr-3">
+        <div className="w-[105px] border-r border-[#6F4E37]/20 bg-white py-1 px-1.5 flex flex-col gap-2.5 overflow-y-auto scrollbar-none shrink-0 pr-3">
           <button
             onClick={() => setActiveCat("all")}
-            className={`py-3 px-2 rounded-lg text-center flex flex-col items-center justify-center gap-1.5 transition-all border cursor-pointer select-none ${
+            className={`py-3 px-1 rounded-2xl text-center flex flex-col items-center justify-center gap-1.5 transition border cursor-pointer select-none ${
               activeCat === "all"
-                ? "bg-[#6F4E37] text-white border-[#6F4E37]/50 shadow-sm"
-                : "bg-[#FAF3E0]/30 border-[#6F4E37]/30 text-[#6F4E37] hover:bg-[#FAF3E0] hover:border-[#6F4E37]/50"
+                ? "bg-[#6F4E37] text-white border-[#6F4E37] shadow-md shadow-[#6F4E37]/15"
+                : "border-[#6F4E37]/30 text-[#6F4E37] hover:bg-[#6F4E37]/10"
             }`}
           >
-            <span className="text-[10px] tracking-wider font-bold uppercase">All Items</span>
+            <span className="text-[10px] tracking-wider font-extrabold uppercase">All Items</span>
           </button>
           {categories.map((c) => {
             const isActive = activeCat === c.id;
@@ -396,18 +317,16 @@ export default function OrderView() {
               <button
                 key={c.id}
                 onClick={() => setActiveCat(c.id)}
-                className={`py-3 px-2 rounded-lg text-center flex flex-col items-center justify-center gap-1.5 transition-all border cursor-pointer select-none ${
+                className="py-3 px-1 rounded-2xl text-center flex flex-col items-center justify-center gap-1.5 transition border cursor-pointer select-none"
+                style={
                   isActive
-                    ? "bg-[#6F4E37] text-white border-[#6F4E37]/50 shadow-sm"
-                    : "bg-[#FAF3E0]/30 border-[#6F4E37]/30 text-[#6F4E37] hover:bg-[#FAF3E0] hover:border-[#6F4E37]/50"
-                }`}
+                    ? { background: c.color, color: "white", borderColor: c.color }
+                    : { color: c.color, borderColor: `${c.color}50` }
+                }
               >
-                <span className="text-[10px] tracking-wider font-bold uppercase truncate max-w-full">
+                <span className="text-[10px] tracking-wider font-extrabold uppercase truncate max-w-full px-0.5">
                   {c.name}
                 </span>
-                {!isActive && (
-                  <div className="w-2 h-2 rounded-full mt-1" style={{ backgroundColor: c.color }} />
-                )}
               </button>
             );
           })}
@@ -423,10 +342,10 @@ export default function OrderView() {
                   <button
                     key={p.id}
                     onClick={() => handleAdd(p.id)}
-                    className="group relative rounded-xl bg-[#FAF3E0]/30 hover:bg-[#FAF3E0]/80 border border-[#6F4E37]/30 hover:border-[#6F4E37]/80 hover:shadow-md p-4 text-left transition-all duration-200 cursor-pointer flex flex-col justify-between h-[105px] select-none"
+                    className="group relative rounded-2xl bg-[#FAF3E0]/30 hover:bg-[#FAF3E0]/70 border border-[#6F4E37]/20 hover:border-[#6F4E37]/55 p-4 text-left transition-all duration-300 hover:-translate-y-0.5 shadow-sm hover:shadow-lg cursor-pointer flex flex-col justify-between h-[105px] select-none"
                   >
                     <div className="w-full flex items-start justify-between">
-                      <div className="font-semibold text-[#6F4E37] text-[13px] leading-snug line-clamp-2 max-w-[85%]">
+                      <div className="font-bold text-[#2B2118] group-hover:text-[#6F4E37] text-xs leading-snug line-clamp-2 max-w-[85%]">
                         {p.name}
                       </div>
                       {cat && (
@@ -436,7 +355,7 @@ export default function OrderView() {
                         />
                       )}
                     </div>
-                    <div className="text-[#6F4E37] font-bold text-sm tracking-tight">
+                    <div className="text-[#6F4E37] font-extrabold text-sm tracking-tight">
                       ₹{p.price.toLocaleString()}
                     </div>
                   </button>
@@ -453,12 +372,12 @@ export default function OrderView() {
       </div>
 
       {/* COLUMN 2: CART / ORDER PANEL */}
-      <div className="col-span-3 flex flex-col bg-white border border-[#6F4E37]/30 p-4 rounded-xl overflow-hidden shadow-sm justify-between">
+      <div className="col-span-3 flex flex-col bg-white border border-[#6F4E37]/25 p-3.5 rounded-3xl overflow-hidden shadow-md justify-between">
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
           {/* Cart Header */}
-          <div className="flex items-center justify-between pb-3 border-b border-[#6F4E37]/20 shrink-0">
+          <div className="flex items-center justify-between pb-3.5 border-b border-[#6F4E37]/20 shrink-0">
             <div>
-              <div className="text-[15px] font-bold text-[#6F4E37]">Order #{order.number}</div>
+              <div className="text-sm font-extrabold text-[#2B2118]">Order #{order.number}</div>
               {customer && (
                 <div className="text-[11px] text-[#6F4E37] mt-0.5 font-bold">
                   Cust: {customer.name}
@@ -487,33 +406,29 @@ export default function OrderView() {
                       setSelectedLineProductId(l.productId);
                       setNumpadBuffer("");
                     }}
-                    className={`group border rounded-lg p-3 transition-all cursor-pointer flex flex-col gap-2 ${
+                    className={`group border rounded-2xl p-3 transition cursor-pointer flex flex-col gap-2 ${
                       isSelected
-                        ? "border-[#6F4E37]/50 bg-[#6F4E37] shadow-sm"
-                        : "border-[#6F4E37]/30 bg-[#FAF3E0]/30 hover:border-[#6F4E37]/60 hover:bg-[#FAF3E0]/60"
+                        ? "border-[#6F4E37] bg-[#6F4E37]/10 shadow-sm"
+                        : "border-[#6F4E37]/15 bg-[#FAF3E0]/20 hover:border-[#6F4E37]/30 hover:bg-[#FAF3E0]/40"
                     }`}
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className={`font-semibold text-[13px] transition ${isSelected ? "text-white" : "text-[#6F4E37]"}`}>
+                        <div className={`font-semibold text-sm transition ${isSelected ? "text-[#6F4E37]" : "text-[#2B2118]"}`}>
                           {p.name}
                         </div>
-                        <div className={`text-[11px] mt-0.5 ${isSelected ? "text-[#6F4E37]" : "text-[#6F4E37]/60"}`}>₹{l.unitPrice} each</div>
+                        <div className="text-[11px] text-zinc-500 mt-0.5">₹{l.unitPrice} each</div>
                       </div>
-                      <div className={`font-bold text-[13px] ${isSelected ? "text-white" : "text-[#6F4E37]"}`}>
+                      <div className="font-extrabold text-sm text-[#2B2118]">
                         ₹{(l.qty * l.unitPrice).toFixed(0)}
                       </div>
                     </div>
 
-                      <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between">
                       {/* Quantity Controls */}
                       <div className="flex items-center gap-1.5">
                         <button
-                          className={`h-6 w-6 rounded-md flex items-center justify-center transition border cursor-pointer ${
-                            isSelected
-                              ? "bg-white/10 hover:bg-white/20 text-white border-white/10"
-                              : "bg-white hover:bg-[#FAF3E0] text-[#6F4E37] border-[#6F4E37]/40"
-                          }`}
+                          className="h-6 w-6 rounded-lg bg-[#FAF3E0] hover:bg-[#6F4E37]/20 text-[#6F4E37] flex items-center justify-center transition border border-[#6F4E37]/25 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             setLineQty(order.id, l.productId, l.qty - 1);
@@ -522,13 +437,9 @@ export default function OrderView() {
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className={`font-bold text-xs w-6 text-center ${isSelected ? "text-white" : "text-[#6F4E37]"}`}>{l.qty}</span>
+                        <span className="font-extrabold text-xs w-6 text-[#2B2118] text-center">{l.qty}</span>
                         <button
-                          className={`h-6 w-6 rounded-md flex items-center justify-center transition border cursor-pointer ${
-                            isSelected
-                              ? "bg-white/10 hover:bg-white/20 text-white border-white/10"
-                              : "bg-white hover:bg-[#FAF3E0] text-[#6F4E37] border-[#6F4E37]/40"
-                          }`}
+                          className="h-6 w-6 rounded-lg bg-[#FAF3E0] hover:bg-[#6F4E37]/20 text-[#6F4E37] flex items-center justify-center transition border border-[#6F4E37]/25 cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
                             setLineQty(order.id, l.productId, l.qty + 1);
@@ -541,9 +452,7 @@ export default function OrderView() {
 
                       {/* Trash Delete */}
                       <button
-                        className={`h-6 w-6 rounded-md hover:bg-red-50 hover:text-red-500 flex items-center justify-center transition cursor-pointer ${
-                          isSelected ? "text-[#6F4E37]" : "text-[#6F4E37]/40"
-                        }`}
+                        className="h-6 w-6 rounded-lg hover:bg-red-500/10 text-zinc-500 hover:text-red-400 flex items-center justify-center transition cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
                           setLineQty(order.id, l.productId, 0);
@@ -556,8 +465,8 @@ export default function OrderView() {
                     </div>
 
                     {l.productDiscount && (
-                      <div className="text-xs text-emerald-600 bg-emerald-50/50 px-2.5 py-1.5 rounded-lg border border-emerald-200 font-bold mt-1 text-center w-full">
-                        {l.productDiscount.label} on ₹{(l.qty * l.unitPrice).toFixed(0)}
+                      <div className="text-[10px] bg-[#6F4E37]/10 text-[#6F4E37] px-2.5 py-0.5 rounded-md self-start border border-[#6F4E37]/20 font-bold">
+                        {l.productDiscount.label}: -₹{l.productDiscount.amount.toFixed(0)}
                       </div>
                     )}
                   </div>
@@ -568,9 +477,9 @@ export default function OrderView() {
         </div>
 
         {/* Kitchen, Totals, Actions */}
-        <div className="space-y-3 shrink-0 pt-3 border-t border-[#6F4E37]/20">
+        <div className="space-y-3 shrink-0 pt-2.5 border-t border-[#6F4E37]/10">
           {order.sentToKitchen ? (
-            <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 text-xs font-bold px-3 py-2.5 rounded-lg flex items-center justify-center gap-1 w-full select-none">
+            <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-xs font-extrabold px-3 py-2.5 rounded-xl flex items-center justify-center gap-1 w-full select-none">
               ✓ Sent to Kitchen
             </span>
           ) : (
@@ -587,7 +496,7 @@ export default function OrderView() {
                   toast.error(err.message || "Failed to send order to kitchen");
                 }
               }}
-              className="bg-[#6F4E37] hover:bg-black text-white border border-[#6F4E37]/30 text-xs font-bold px-3 py-2.5 rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer w-full"
+              className="bg-[#6F4E37]/10 text-[#6F4E37] hover:bg-[#6F4E37] hover:text-white border border-[#6F4E37]/25 text-xs font-extrabold px-3 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer w-full"
             >
               <Send className="w-3.5 h-3.5" />
               Send to Kitchen
@@ -595,24 +504,24 @@ export default function OrderView() {
           )}
 
           {/* Quick action buttons row */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
             <button
               onClick={() => setCustomerOpen(true)}
-              className="bg-[#FAF3E0]/50 hover:bg-[#FAF3E0] text-[#6F4E37] text-[11px] font-bold py-2 px-1 rounded-lg transition border border-[#6F4E37]/30 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+              className="bg-[#FAF3E0] hover:bg-[#2C2E38] text-[#6F4E37]/80 text-[11px] font-bold py-2 px-1 rounded-xl transition border border-[#6F4E37]/25 flex items-center justify-center gap-1 cursor-pointer"
             >
               <UserIcon className="w-3.5 h-3.5 text-[#6F4E37]" />
               Customer
             </button>
             <button
               onClick={() => setCouponOpen(true)}
-              className="bg-[#FAF3E0]/50 hover:bg-[#FAF3E0] text-[#6F4E37] text-[11px] font-bold py-2 px-1 rounded-lg transition border border-[#6F4E37]/30 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+              className="bg-[#FAF3E0] hover:bg-[#2C2E38] text-[#6F4E37]/80 text-[11px] font-bold py-2 px-1 rounded-xl transition border border-[#6F4E37]/25 flex items-center justify-center gap-1 cursor-pointer"
             >
               <Tag className="w-3.5 h-3.5 text-[#6F4E37]" />
               Discount
             </button>
             <button
               onClick={() => setEmailOpen(true)}
-              className="bg-[#FAF3E0]/50 hover:bg-[#FAF3E0] text-[#6F4E37] text-[11px] font-bold py-2 px-1 rounded-lg transition border border-[#6F4E37]/30 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+              className="bg-[#FAF3E0] hover:bg-[#2C2E38] text-[#6F4E37]/80 text-[11px] font-bold py-2 px-1 rounded-xl transition border border-[#6F4E37]/25 flex items-center justify-center gap-1 cursor-pointer"
             >
               <Mail className="w-3.5 h-3.5 text-[#6F4E37]" />
               Send
@@ -620,34 +529,34 @@ export default function OrderView() {
           </div>
 
           {/* Totals */}
-          <div className="space-y-1.5 text-xs pt-1">
+          <div className="space-y-1.5 text-xs">
             <div className="flex justify-between text-[#6F4E37]/60 font-medium">
               <span>Sub total</span>
-              <span className="font-semibold text-[#6F4E37]">₹{order.subtotal.toFixed(0)}</span>
+              <span className="font-bold text-[#2B2118]">₹{order.subtotal.toFixed(0)}</span>
             </div>
             <div className="flex justify-between text-[#6F4E37]/60 font-medium">
               <span>Tax (GST 5%)</span>
-              <span className="font-semibold text-[#6F4E37]">₹{order.tax.toFixed(0)}</span>
+              <span className="font-bold text-[#2B2118]">₹{order.tax.toFixed(0)}</span>
             </div>
             {order.discountTotal > 0 && (
-              <div className="flex justify-between text-emerald-600 font-bold">
-                <span>Discount</span>
-                <span>-₹{order.discountTotal.toFixed(0)}{order.discountLabel ? ` (${order.discountLabel})` : ""}</span>
+              <div className="flex justify-between text-emerald-400 font-bold">
+                <span>Discount {order.discountLabel ? `(${order.discountLabel})` : ""}</span>
+                <span>-₹{order.discountTotal.toFixed(0)}</span>
               </div>
             )}
-            <div className="flex justify-between font-bold text-sm pt-2.5 border-t border-[#6F4E37]/30 text-[#6F4E37]">
+            <div className="flex justify-between font-extrabold text-sm pt-2 border-t border-[#6F4E37]/10 text-[#2B2118]">
               <span>Total</span>
-              <span className="text-[#6F4E37] text-base font-extrabold">₹{order.total.toFixed(0)}</span>
+              <span className="text-[#6F4E37] text-base">₹{order.total.toFixed(0)}</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* COLUMN 3: PAYMENT METHOD & NUMPAD PANEL */}
-      <div className="col-span-3 flex flex-col bg-white border border-[#6F4E37]/30 rounded-xl p-3 shadow-sm justify-between h-full overflow-hidden">
+      <div className="col-span-3 flex flex-col bg-white border border-[#6F4E37]/25 rounded-3xl p-3.5 shadow-md justify-between h-full overflow-hidden">
         {/* Payment selector */}
-        <div className="space-y-2 shrink-0">
-          <h3 className="font-bold text-[11px] text-gray-400 uppercase tracking-[2px]">Payment</h3>
+        <div className="space-y-3 shrink-0">
+          <h3 className="font-extrabold text-xs text-[#6F4E37]/60 uppercase tracking-wider">Payment</h3>
           <div className="flex flex-col gap-2">
             {paymentMethods
               .filter((p) => p.active)
@@ -657,14 +566,14 @@ export default function OrderView() {
                   <button
                     key={p.id}
                     onClick={() => setSelectedPM(p.id)}
-                    className={`w-full p-2 border rounded-lg text-left text-[13px] flex items-center justify-between transition-all duration-200 cursor-pointer ${
+                    className={`w-full p-3 border rounded-xl text-left text-xs flex items-center justify-between transition-all duration-200 cursor-pointer ${
                       isActive
-                        ? "border-[#6F4E37] bg-[#6F4E37] text-white shadow-sm font-semibold"
-                        : "border-[#6F4E37]/30 bg-[#FAF3E0]/30 text-[#6F4E37] hover:bg-[#FAF3E0] hover:border-[#6F4E37]/60 font-medium"
+                        ? "border-[#6F4E37] bg-[#6F4E37] text-white shadow-md shadow-[#6F4E37]/15 font-bold"
+                        : "border-[#6F4E37]/20 bg-[#FAF3E0]/30 text-[#6F4E37]/80 hover:bg-[#FAF3E0]/50 font-medium"
                     }`}
                   >
                     <span>{p.name}</span>
-                    <span className={`text-[9px] tracking-wide font-bold uppercase px-1.5 py-0.5 rounded border ${isActive ? "bg-white/20 text-white border-white/40" : "bg-[#FAF3E0]/50 text-[#6F4E37]/60 border-[#6F4E37]/30"}`}>
+                    <span className="text-[9px] tracking-wide font-extrabold uppercase px-1.5 py-0.5 bg-[#FAF3E0] rounded border border-[#6F4E37]/20 text-[#6F4E37]">
                       {p.type}
                     </span>
                   </button>
@@ -674,92 +583,48 @@ export default function OrderView() {
 
           {/* QR or Inputs */}
           {selectedPM && (
-            <div className="border-t border-[#6F4E37]/20 pt-2 space-y-1.5">
-              {selectedPMObj?.type?.toUpperCase() === "CASH" && (
-                <div className="space-y-2">
-                  {/* Amount Received Input */}
-                  <Label className="text-[10px] uppercase tracking-[1px] font-bold text-[#6F4E37]/60">Cash Received from Customer</Label>
+            <div className="border-t border-[#6F4E37]/10 pt-3 space-y-2.5">
+              {selectedPMObj?.type === "Cash" && (
+                <div className="space-y-1">
+                  <Label className="text-[10px] uppercase tracking-wider font-extrabold text-[#6F4E37]/60">Amount Received</Label>
                   <Input
                     type="number"
-                    autoFocus
-                    placeholder={`Min ₹${order.total.toFixed(0)}`}
+                    placeholder="Enter cash amount"
                     value={cashReceived}
                     onChange={(e) => setCashReceived(e.target.value)}
-                    className="bg-[#FAF3E0]/50 text-[#6F4E37] border-[#6F4E37]/30 h-10 rounded-lg focus:border-[#6F4E37] focus:bg-white focus:ring-1 focus:ring-[#6F4E37] text-[15px] font-bold"
+                    className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/20 h-9 rounded-xl focus:border-[#6F4E37] focus:bg-white"
                   />
-
-                  {/* Quick denomination buttons */}
-                  <div className="grid grid-cols-4 gap-1">
-                    {[
-                      Math.ceil(order.total / 10) * 10,
-                      Math.ceil(order.total / 50) * 50,
-                      Math.ceil(order.total / 100) * 100,
-                      Math.ceil(order.total / 500) * 500,
-                    ]
-                      .filter((v, i, arr) => arr.indexOf(v) === i && v >= order.total)
-                      .slice(0, 4)
-                      .map((denom) => (
-                        <button
-                          key={denom}
-                          onClick={() => setCashReceived(String(denom))}
-                          className={`py-1.5 rounded-lg text-[11px] font-bold border transition cursor-pointer ${
-                            parseFloat(cashReceived) === denom
-                              ? "bg-[#6F4E37] text-white border-[#6F4E37]"
-                              : "bg-[#FAF3E0]/30 text-[#6F4E37] border-[#6F4E37]/30 hover:bg-[#FAF3E0]"
-                          }`}
-                        >
-                          ₹{denom}
-                        </button>
-                      ))}
-                  </div>
-
-                  {/* Change Due — BIG display */}
-                  {cashReceived && (
-                    <div className={`rounded-lg p-2 text-center border transition-all ${
-                      change >= 0
-                        ? "bg-emerald-50 border-emerald-200"
-                        : "bg-red-50 border-red-200"
-                    }`}>
-                      <div className={`text-[10px] font-bold uppercase tracking-[1px] mb-1 ${
-                        change >= 0 ? "text-emerald-600" : "text-red-500"
-                      }`}>
-                        {change >= 0 ? "Change to Return" : "Amount Short"}
-                      </div>
-                      <div className={`text-xl font-black tracking-tight ${
-                        change >= 0 ? "text-emerald-600" : "text-red-500"
-                      }`}>
-                        ₹{Math.abs(change).toFixed(0)}
-                      </div>
-                      {change < 0 && (
-                        <div className="text-[10px] text-red-500 font-semibold mt-0.5">
-                          Customer needs to pay ₹{Math.abs(change).toFixed(0)} more
-                        </div>
-                      )}
+                  {cashReceived && change >= 0 && (
+                    <div className="text-xs text-[#6F4E37]/80 flex justify-between items-center bg-[#FAF3E0]/50 px-2.5 py-1 rounded-lg border border-[#6F4E37]/10">
+                      <span>Change due:</span>
+                      <span className="font-extrabold text-[#6F4E37]">₹{change.toFixed(0)}</span>
                     </div>
                   )}
                 </div>
               )}
 
-              {selectedPMObj?.type?.toUpperCase() === "CARD" && (
+              {selectedPMObj?.type === "Card" && (
                 <div className="space-y-1">
-                  <Label className="text-[10px] uppercase tracking-[1px] font-bold text-[#6F4E37]/60">Transaction Ref</Label>
+                  <Label className="text-[10px] uppercase tracking-wider font-extrabold text-[#6F4E37]/60">Transaction Ref</Label>
                   <Input
                     placeholder="Reference..."
                     value={cardRef}
                     onChange={(e) => setCardRef(e.target.value)}
-                    className="bg-[#FAF3E0]/50 text-[#6F4E37] border-[#6F4E37]/30 h-10 rounded-lg focus:border-[#6F4E37] focus:bg-white focus:ring-1 focus:ring-[#6F4E37] text-[13px] font-medium"
+                    className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/20 h-9 rounded-xl focus:border-[#6F4E37] focus:bg-white"
                   />
                 </div>
               )}
 
-              {selectedPMObj?.type?.toUpperCase() === "UPI" && (
-                <div className="flex flex-col items-center bg-[#FAF3E0]/30 p-2.5 rounded-lg border border-[#6F4E37]/30">
-                  <div className="text-[10px] font-bold text-[#6F4E37] uppercase tracking-wider mb-2">
-                    Online QR Payment
-                  </div>
-                  <div className="text-center text-[11px] font-medium text-[#6F4E37]/60 px-4 pb-1">
-                    Click "Confirm Payment" to generate a secure Razorpay QR code for ₹{order.total.toFixed(0)}.
-                  </div>
+              {selectedPMObj?.type === "UPI" && selectedPMObj.upiId && (
+                <div className="flex flex-col items-center bg-[#FAF3E0]/35 p-2.5 rounded-xl border border-[#6F4E37]/10">
+                  <QRCodeCanvas
+                    value={`upi://pay?pa=${selectedPMObj.upiId}&am=${order.total}&cu=INR`}
+                    size={105}
+                    bgColor="#FAF3E0"
+                    fgColor="#6F4E37"
+                    includeMargin={false}
+                  />
+                  <div className="text-[10px] font-extrabold text-[#6F4E37] mt-2">{selectedPMObj.upiId}</div>
                 </div>
               )}
             </div>
@@ -771,25 +636,25 @@ export default function OrderView() {
               <button
                 onClick={doPay}
                 disabled={!selectedPM || order.total === 0}
-                className="w-full bg-[#6F4E37] hover:bg-black disabled:bg-[#FAF3E0] disabled:text-[#6F4E37]/40 disabled:border-[#6F4E37]/30 text-white font-bold py-2.5 rounded-lg text-[13px] uppercase tracking-widest transition-all duration-200 shadow-sm cursor-pointer border border-[#6F4E37]"
+                className="w-full bg-[#6F4E37] hover:bg-[#6F4E37]/90 disabled:bg-[#FAF3E0] disabled:text-zinc-500 disabled:border-[#6F4E37]/10 text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-wider transition-all duration-200 shadow-md shadow-[#C85D40]/10 cursor-pointer border border-[#6F4E37]/20"
               >
                 Confirm Payment
               </button>
             ) : (
               <div className="space-y-2">
-                <div className="text-center text-emerald-500 font-bold text-sm flex items-center justify-center gap-1">
+                <div className="text-center text-emerald-400 font-extrabold text-sm flex items-center justify-center gap-1">
                   ✓ Paid successfully
                 </div>
                 <div className="flex gap-2">
                   <button
                     onClick={() => window.print()}
-                    className="flex-1 bg-[#FAF3E0]/50 hover:bg-[#FAF3E0] text-[#6F4E37] font-semibold py-2.5 px-3 rounded-lg text-[13px] transition border border-[#6F4E37]/30 flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                    className="flex-1 bg-[#FAF3E0] hover:bg-[#6F4E37]/20 text-[#6F4E37] font-bold py-2.5 px-3 rounded-xl text-xs transition border border-[#6F4E37]/25 flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <Printer className="w-4 h-4" /> Print
+                    <Printer className="w-3.5 h-3.5" /> Print
                   </button>
                   <button
                     onClick={reset}
-                    className="flex-1 bg-[#6F4E37] hover:bg-black text-white font-semibold py-2.5 px-3 rounded-lg text-[13px] transition shadow-sm cursor-pointer"
+                    className="flex-1 bg-[#6F4E37] hover:bg-[#6F4E37]/90 text-white font-bold py-2.5 px-3 rounded-xl text-xs transition shadow-md shadow-[#6F4E37]/15 cursor-pointer"
                   >
                     New Order
                   </button>
@@ -797,9 +662,9 @@ export default function OrderView() {
                 {/* Send Receipt by Email */}
                 <button
                   onClick={() => setEmailOpen(true)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-3 rounded-lg text-[13px] transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-3 rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <Mail className="w-4 h-4" /> Email Receipt to Customer
+                  <Mail className="w-3.5 h-3.5" /> Email Receipt to Customer
                 </button>
               </div>
             )}
@@ -807,16 +672,16 @@ export default function OrderView() {
         </div>
 
         {/* NUMPAD COMPONENT PANEL */}
-        <div className="bg-white rounded-xl border border-[#6F4E37]/30 p-2.5 flex flex-col justify-between min-h-[175px] shadow-sm mt-1">
+        <div className="bg-[#FAF3E0]/40 rounded-2xl border border-[#6F4E37]/20 p-2.5 flex flex-col justify-between min-h-[220px]">
           {/* Active Item Edit Indicator */}
-          <div className="text-[10px] text-[#6F4E37]/50 uppercase tracking-widest font-bold flex items-center justify-between pb-2 border-b border-[#6F4E37]/20 mb-2">
+          <div className="text-[9px] text-zinc-500 uppercase tracking-widest font-extrabold flex items-center justify-between pb-1.5 border-b border-[#6F4E37]/10 mb-1.5">
             <span>Numpad Mode</span>
             {selectedLineProductId ? (
               <span className="text-[#6F4E37] font-bold normal-case">
                 Editing: {products.find(p => p.id === selectedLineProductId)?.name}
               </span>
             ) : (
-              <span className="text-[#6F4E37]/50 normal-case font-medium">
+              <span className="text-zinc-500 normal-case">
                 {selectedPMObj?.type === "Cash" ? "Cash Keyboard Mode" : "Select item"}
               </span>
             )}
@@ -824,15 +689,15 @@ export default function OrderView() {
 
           <div className="flex gap-2 flex-1 min-h-0">
             {/* Number grid */}
-            <div className="flex-[4] grid grid-cols-3 gap-1">
+            <div className="flex-[4] grid grid-cols-3 gap-1.5">
               {["1", "2", "3", "4", "5", "6", "7", "8", "9", "+/-", "0", "⌫"].map((key) => (
                 <button
                   key={key}
                   onClick={() => handleNumpadKey(key)}
-                  className={`font-semibold text-[15px] rounded-lg py-1.5 transition-all cursor-pointer flex items-center justify-center outline-none select-none ${
+                  className={`font-extrabold text-sm rounded-lg py-2 border transition cursor-pointer flex items-center justify-center outline-none select-none ${
                     key === "⌫"
-                      ? "bg-red-50 hover:bg-red-100 text-red-600 border border-red-200"
-                      : "bg-[#FAF3E0]/30 hover:bg-[#FAF3E0] text-[#6F4E37] border border-[#6F4E37]/30 shadow-sm"
+                      ? "bg-[#C63D2F] hover:bg-[#C63D2F]/90 active:bg-red-700 text-white border-[#C63D2F]/30"
+                      : "bg-[#FAF3E0] hover:bg-[#6F4E37]/20 hover:text-[#6F4E37] active:bg-[#6F4E37]/30 text-[#2B2118] border-[#6F4E37]/20 hover:border-[#6F4E37]/40"
                   }`}
                 >
                   {key}
@@ -844,30 +709,30 @@ export default function OrderView() {
             <div className="flex-1 flex flex-col gap-1.5">
               <button
                 onClick={() => selectMode("price")}
-                className={`flex-1 rounded-lg text-[11px] font-bold transition-all flex flex-col items-center justify-center border cursor-pointer outline-none select-none shadow-sm ${
+                className={`flex-1 rounded-lg text-[10px] font-extrabold transition flex flex-col items-center justify-center border cursor-pointer outline-none select-none ${
                   numpadMode === "price"
-                    ? "bg-[#6F4E37] text-white border-[#6F4E37]"
-                    : "bg-[#FAF3E0]/30 hover:bg-[#FAF3E0] text-[#6F4E37]/60 border-[#6F4E37]/30"
+                    ? "bg-[#6F4E37] text-white border-[#6F4E37] shadow-sm"
+                    : "bg-[#FAF3E0] hover:bg-[#2C2E38] text-[#6F4E37]/60 border-[#6F4E37]/20"
                 }`}
               >
                 <span>Prices</span>
               </button>
               <button
                 onClick={() => selectMode("disc")}
-                className={`flex-1 rounded-lg text-[11px] font-bold transition-all flex flex-col items-center justify-center border cursor-pointer outline-none select-none shadow-sm ${
+                className={`flex-1 rounded-lg text-[10px] font-extrabold transition flex flex-col items-center justify-center border cursor-pointer outline-none select-none ${
                   numpadMode === "disc"
-                    ? "bg-[#6F4E37] text-white border-[#6F4E37]"
-                    : "bg-[#FAF3E0]/30 hover:bg-[#FAF3E0] text-[#6F4E37]/60 border-[#6F4E37]/30"
+                    ? "bg-[#6F4E37] text-white border-[#6F4E37] shadow-sm"
+                    : "bg-[#FAF3E0] hover:bg-[#2C2E38] text-[#6F4E37]/60 border-[#6F4E37]/20"
                 }`}
               >
                 <span>Disc.</span>
               </button>
               <button
                 onClick={() => selectMode("qty")}
-                className={`flex-1 rounded-lg text-[11px] font-bold transition-all flex flex-col items-center justify-center border cursor-pointer outline-none select-none shadow-sm ${
+                className={`flex-1 rounded-lg text-[10px] font-extrabold transition flex flex-col items-center justify-center border cursor-pointer outline-none select-none ${
                   numpadMode === "qty"
-                    ? "bg-[#6F4E37] text-white border-[#6F4E37]"
-                    : "bg-[#FAF3E0]/30 hover:bg-[#FAF3E0] text-[#6F4E37]/60 border-[#6F4E37]/30"
+                    ? "bg-[#6F4E37] text-white border-[#6F4E37] shadow-sm"
+                    : "bg-[#FAF3E0] hover:bg-[#2C2E38] text-[#6F4E37]/60 border-[#6F4E37]/20"
                 }`}
               >
                 <span>Qty</span>
@@ -879,23 +744,23 @@ export default function OrderView() {
 
       {/* Coupon dialog */}
       <Dialog open={couponOpen} onOpenChange={setCouponOpen}>
-        <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#6F4E37] max-w-sm rounded-xl">
+        <DialogContent className="bg-white border border-[#6F4E37]/30 text-[#2B2118] max-w-sm rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-[#6F4E37] font-bold">Apply Coupon</DialogTitle>
           </DialogHeader>
-          <div className="py-2">
+          <div className="py-2.5">
             <Input
               placeholder="Enter coupon code (e.g. SUMMER20)"
               value={couponCode}
               onChange={(e) => setCouponCode(e.target.value)}
-              className="bg-[#FAF3E0]/50 text-[#6F4E37] border-[#6F4E37]/30 rounded-lg focus:border-[#6F4E37] focus:ring-1 focus:ring-[#6F4E37]"
+              className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/30 rounded-xl"
             />
           </div>
           <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => setCouponOpen(false)} className="border-[#6F4E37]/30 text-[#6F4E37] hover:bg-[#FAF3E0] flex-1 cursor-pointer">
+            <Button variant="outline" onClick={() => setCouponOpen(false)} className="border-[#6F4E37]/20 text-[#6F4E37]/60 hover:bg-[#FAF3E0] flex-1 cursor-pointer">
               Cancel
             </Button>
-            <Button onClick={applyCoupon} className="bg-[#6F4E37] hover:bg-black text-[#6F4E37] flex-1 font-bold cursor-pointer border border-[#6F4E37]">
+            <Button onClick={applyCoupon} className="bg-[#6F4E37] hover:bg-[#6F4E37]/90 text-white flex-1 font-bold cursor-pointer">
               Apply
             </Button>
           </DialogFooter>
