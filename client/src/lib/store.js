@@ -80,7 +80,7 @@ function normaliseCoupon(c) {
     name: c.name ?? c.code,
     type: c.promotionType ? "Promotion" : "Coupon",
     code: c.code ?? null,
-    apply: c.promotionType ?? "Order",
+    apply: c.promotionType === "PRODUCT" ? "Product" : (c.promotionType === "ORDER" ? "Order" : "Order"),
     discountKind: (c.discountType ?? "PERCENTAGE") === "PERCENTAGE" ? "percent" : "fixed",
     discountValue: Number(c.discountValue),
     minOrderAmount: c.minOrderAmount ? Number(c.minOrderAmount) : null,
@@ -183,6 +183,9 @@ export const useStore = create(
 
           // Fetch fresh KDS state on startup
           await get().fetchKds().catch((err) => console.error("KDS bootstrap fetch failed:", err));
+
+          // Fetch fresh orders from backend
+          await get().fetchOrders().catch((err) => console.error("Orders bootstrap fetch failed:", err));
           
           // Connect real-time socket and setup listeners
           socket.connect();
@@ -410,43 +413,86 @@ export const useStore = create(
         const o = s.orders.find((x) => x.id === orderId);
         if (!o) return;
         const products = s.products;
-        let subtotal = 0, tax = 0, productDiscountTotal = 0;
+
+        // ── Step 1: evaluate product-level promotions ─────────────
+        // Find all active PRODUCT promotions
+        const productPromos = s.coupons.filter(
+          (c) => c.active && c.type === "Promotion" && c.apply === "Product"
+        );
+
+        let subtotal = 0;
+        let tax = 0;
+        let productDiscountTotal = 0;
+
         const newLines = o.lines.map((l) => {
           const p = products.find((x) => x.id === l.productId);
           if (!p) return l;
-          const line = l.qty * l.unitPrice;
-          subtotal += line;
-          tax += (line * p.tax) / 100;
-          return l;
+          const lineGross = l.qty * l.unitPrice;
+          subtotal += lineGross;
+          tax += (lineGross * p.tax) / 100;
+
+          // Check if any product-level promo matches this line
+          const matchedPromo = productPromos.find(
+            (c) => c.productId === l.productId && l.qty >= (c.minQty ?? 1)
+          );
+
+          if (matchedPromo) {
+            const discAmt =
+              matchedPromo.discountKind === "percent"
+                ? (lineGross * matchedPromo.discountValue) / 100
+                : Math.min(matchedPromo.discountValue, lineGross);
+            productDiscountTotal += discAmt;
+            return {
+              ...l,
+              productDiscount: {
+                label:
+                  matchedPromo.discountKind === "percent"
+                    ? `${matchedPromo.discountValue}% off on ₹${lineGross.toFixed(0)}`
+                    : `₹${matchedPromo.discountValue} off on ₹${lineGross.toFixed(0)}`,
+                amount: discAmt,
+                promoId: matchedPromo.id,
+              },
+            };
+          }
+          // Clear stale productDiscount if promo no longer matches
+          return { ...l, productDiscount: undefined };
         });
 
-        let orderDiscount = 0, discountLabel;
+        // ── Step 2: evaluate order-level discount ──────────────────
         const baseForOrderDisc = subtotal;
-        const applyDisc = (kind, val, label) => {
+        let orderDiscount = 0;
+        let discountLabel;
+        let appliedPromoId = null;
+
+        const applyDisc = (kind, val, label, promoId = null) => {
           const amt = kind === "percent" ? (baseForOrderDisc * val) / 100 : val;
           orderDiscount = amt;
           discountLabel = label;
+          appliedPromoId = promoId;
         };
+
         if (couponCode) {
-          const c = s.coupons.find((x) => x.active && x.type === "Coupon" && x.code?.toUpperCase() === couponCode.toUpperCase());
-          if (c) applyDisc(c.discountKind, c.discountValue, `${c.code} (${c.discountKind === "percent" ? c.discountValue + "%" : "₹" + c.discountValue})`);
+          // Manual coupon code entry
+          const c = s.coupons.find(
+            (x) => x.active && x.type === "Coupon" && x.code?.toUpperCase() === couponCode.toUpperCase()
+          );
+          if (c) {
+            applyDisc(
+              c.discountKind,
+              c.discountValue,
+              `${c.code} (${c.discountKind === "percent" ? c.discountValue + "%" : "₹" + c.discountValue})`,
+              c.id
+            );
+          }
         } else if (autoPromoId) {
+          // Manually selected promo from the popup
           const c = s.coupons.find((x) => x.id === autoPromoId && x.active);
-          if (c) applyDisc(c.discountKind, c.discountValue, `${c.name}`);
+          if (c) applyDisc(c.discountKind, c.discountValue, `${c.name}`, c.id);
         } else {
-          // Evaluate Automated promotions (Both Order-level and Product-level)
-          const validPromos = s.coupons.filter((c) => {
-            if (!c.active || c.type !== "Promotion") return false;
-            
-            if (c.apply === "Order") {
-              return (c.minOrderAmount ?? 0) <= baseForOrderDisc;
-            } else if (c.apply === "Product") {
-              // Check if the order has enough quantity of the required product
-              const line = o.lines.find(l => l.productId === c.productId);
-              return line && line.qty >= (c.minQty ?? 0);
-            }
-            return false;
-          });
+          // Auto-evaluate Order-level promotions
+          const validPromos = s.coupons.filter(
+            (c) => c.active && c.type === "Promotion" && c.apply === "Order" && (c.minOrderAmount ?? 0) <= baseForOrderDisc
+          );
 
           if (validPromos.length > 0) {
             // Pick highest discount
@@ -455,15 +501,26 @@ export const useStore = create(
               const cAmt = curr.discountKind === "percent" ? (baseForOrderDisc * curr.discountValue) / 100 : curr.discountValue;
               return cAmt > pAmt ? curr : prev;
             });
-            applyDisc(best.discountKind, best.discountValue, best.name);
+            applyDisc(best.discountKind, best.discountValue, best.name, best.id);
           }
         }
+
         const discountTotal = productDiscountTotal + orderDiscount;
         const total = subtotal + tax - discountTotal;
         set((st) => ({
           orders: st.orders.map((x) =>
             x.id === orderId
-              ? { ...x, lines: newLines, subtotal, tax: Math.round(tax * 100) / 100, discountTotal: Math.round(discountTotal * 100) / 100, discountLabel, total: Math.round(total * 100) / 100 }
+              ? {
+                  ...x,
+                  lines: newLines,
+                  subtotal,
+                  tax: Math.round(tax * 100) / 100,
+                  discountTotal: Math.round(discountTotal * 100) / 100,
+                  discountLabel,
+                  appliedCoupon: couponCode || null,
+                  appliedPromoId,
+                  total: Math.round(total * 100) / 100,
+                }
               : x
           ),
         }));
@@ -605,6 +662,52 @@ export const useStore = create(
           set({ kds: ticketList });
         } catch (e) {
           console.error("fetchKds error:", e);
+        }
+      },
+
+      fetchOrders: async () => {
+        const sid = get().currentSessionId;
+        if (!sid) return;
+        try {
+          const res = await orderApi.getBySession(sid);
+          const raw = Array.isArray(res) ? res : [];
+          
+          const dbOrders = raw.map(o => ({
+            id: o.id,
+            number: o.orderNumber,
+            sessionId: o.sessionId,
+            tableId: o.tableId,
+            customerId: o.customerId,
+            status: o.status === "PAID" ? "Paid" : o.status === "CANCELLED" ? "Cancelled" : "Draft",
+            subtotal: parseFloat(o.subtotal) || 0,
+            tax: parseFloat(o.taxAmount) || 0,
+            discountTotal: parseFloat(o.discountAmount) || 0,
+            total: parseFloat(o.total) || 0,
+            sentToKitchen: o.kitchenOrders && o.kitchenOrders.length > 0,
+            lines: (o.orderItems || []).map(item => ({
+              productId: item.productId,
+              qty: parseFloat(item.quantity) || 1,
+              unitPrice: parseFloat(item.unitPrice) || 0,
+              productDiscount: item.promotionId ? { promoId: item.promotionId } : undefined
+            }))
+          }));
+
+          set(st => {
+            const merged = [...st.orders];
+            dbOrders.forEach(dbo => {
+              const idx = merged.findIndex(mo => mo.id === dbo.id);
+              if (idx === -1) {
+                merged.push(dbo);
+              } else {
+                if (dbo.status !== "Draft" || merged[idx].status === "Draft") {
+                  merged[idx] = { ...merged[idx], ...dbo };
+                }
+              }
+            });
+            return { orders: merged };
+          });
+        } catch (e) {
+          console.error("fetchOrders error", e);
         }
       },
 

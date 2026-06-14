@@ -112,11 +112,12 @@ export const customerApi = {
 // ── Orders ────────────────────────────────────────────────
 export const orderApi = {
   getAll: () => request("GET", "/orders"),
+  getBySession: (sessionId) => request("GET", `/orders/by-session/${sessionId}`),
   getOne: (id) => request("GET", `/orders/${id}`),
   create: (data) => request("POST", "/orders", data),
-  update: (id, data) => request("PUT", `/orders/${id}`, data),
+  update: (id, data) => request("PUT", `/orders/${id}/status`, data), // Server expects /status
   delete: (id) => request("DELETE", `/orders/${id}`),
-  pay: (id, data) => request("POST", `/orders/${id}/pay`, data),
+  pay: (id, data) => request("PUT", `/orders/${id}/status`, data), // Alias for status update
 };
 
 // ── Sessions ──────────────────────────────────────────────

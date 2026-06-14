@@ -136,9 +136,13 @@ export default function OrderView() {
   };
 
   const handleAdd = (pid) => {
-    if (!order) return;
-    addLine(order.id, pid);
-    updateOrder(order.id, { sentToKitchen: false });
+    let targetOrderId = order?.id;
+    if (!targetOrderId) {
+      targetOrderId = createDraftOrder(currentTableId || "walk-in", null);
+      setDraftOrder(targetOrderId);
+    }
+    addLine(targetOrderId, pid);
+    updateOrder(targetOrderId, { sentToKitchen: false });
     setSelectedLineProductId(pid);
     setNumpadBuffer("");
   };
@@ -274,23 +278,20 @@ export default function OrderView() {
     setNumpadBuffer("");
   };
 
-  if (!order) {
-    return (
-      <div className="h-[calc(100vh-4rem)] bg-[#FAF3E0] text-[#2B2118] flex flex-col justify-center items-center select-none">
-        <FloorPopup open={showFloor} onSelect={handleSelectTable} onOpenChange={setShowFloor} />
-        <CustomerCaptureModal open={captureOpen} onOpenChange={setCaptureOpen} tableId={pendingTable} onSuccess={handleCustomerCaptured} />
-        <Coffee className="w-16 h-16 text-[#6F4E37] mb-4 animate-bounce" />
-        <h2 className="text-xl font-extrabold mb-2">Welcome to Odoo Cafe POS</h2>
-        <p className="text-sm text-[#6F4E37]/60 mb-6">Select a dining table to launch a sales session.</p>
-        <Button onClick={() => setShowFloor(true)} className="bg-[#6F4E37] hover:bg-[#6F4E37]/90 text-white cursor-pointer px-6 py-2 rounded-xl font-bold shadow-md shadow-[#6F4E37]/25">
-          <Grid3x3 className="w-4 h-4 mr-2" /> Select Table
-        </Button>
-      </div>
-    );
-  }
+  const displayOrder = order || {
+    id: "temp",
+    number: "NEW",
+    lines: [],
+    subtotal: 0,
+    tax: 0,
+    discountTotal: 0,
+    total: 0,
+    sentToKitchen: false,
+  };
 
   const selectedPMObj = paymentMethods.find((p) => p.id === selectedPM);
-  const change = parseFloat(cashReceived || "0") - order.total;
+  const roundedTotal = Math.round(displayOrder.total);
+  const change = parseFloat(cashReceived || "0") - roundedTotal;
 
   return (
     <div className="grid grid-cols-12 gap-3.5 p-3.5 h-[calc(100vh-4rem)] bg-[#FAF3E0] text-[#2B2118] overflow-hidden select-none">
@@ -377,7 +378,7 @@ export default function OrderView() {
           {/* Cart Header */}
           <div className="flex items-center justify-between pb-3.5 border-b border-[#6F4E37]/20 shrink-0">
             <div>
-              <div className="text-sm font-extrabold text-[#2B2118]">Order #{order.number}</div>
+              <div className="text-sm font-extrabold text-[#2B2118]">Order #{displayOrder.number}</div>
               {customer && (
                 <div className="text-[11px] text-[#6F4E37] mt-0.5 font-bold">
                   Cust: {customer.name}
@@ -388,13 +389,13 @@ export default function OrderView() {
 
           {/* Cart Items List */}
           <div className="flex-1 overflow-y-auto py-3 space-y-2 min-h-0 pr-1">
-            {order.lines.length === 0 ? (
+            {displayOrder.lines.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-zinc-500 text-xs py-12">
                 <Package className="w-8 h-8 mb-2 stroke-[1.5]" />
                 <span>Tap products to add items</span>
               </div>
             ) : (
-              order.lines.map((l) => {
+              displayOrder.lines.map((l) => {
                 const p = products.find((x) => x.id === l.productId);
                 if (!p) return null;
                 const isSelected = selectedLineProductId === l.productId;
@@ -477,15 +478,15 @@ export default function OrderView() {
         </div>
 
         {/* Kitchen, Totals, Actions */}
-        <div className="space-y-3 shrink-0 pt-2.5 border-t border-[#6F4E37]/10">
-          {order.sentToKitchen ? (
+        <div className="space-y-3 shrink-0 pt-3 border-t border-[#6F4E37]/20">
+          {order?.sentToKitchen ? (
             <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-xs font-extrabold px-3 py-2.5 rounded-xl flex items-center justify-center gap-1 w-full select-none">
               ✓ Sent to Kitchen
             </span>
           ) : (
             <button
               onClick={async () => {
-                if (order.lines.length === 0) {
+                if (!order || order.lines.length === 0) {
                   toast.error("Cart is empty");
                   return;
                 }
@@ -529,24 +530,24 @@ export default function OrderView() {
           </div>
 
           {/* Totals */}
-          <div className="space-y-1.5 text-xs">
+          <div className="space-y-1.5 text-xs pt-1">
             <div className="flex justify-between text-[#6F4E37]/60 font-medium">
               <span>Sub total</span>
-              <span className="font-bold text-[#2B2118]">₹{order.subtotal.toFixed(0)}</span>
+              <span className="font-bold text-[#2B2118]">₹{displayOrder.subtotal.toFixed(0)}</span>
             </div>
             <div className="flex justify-between text-[#6F4E37]/60 font-medium">
               <span>Tax (GST 5%)</span>
-              <span className="font-bold text-[#2B2118]">₹{order.tax.toFixed(0)}</span>
+              <span className="font-bold text-[#2B2118]">₹{displayOrder.tax.toFixed(0)}</span>
             </div>
-            {order.discountTotal > 0 && (
-              <div className="flex justify-between text-emerald-400 font-bold">
-                <span>Discount {order.discountLabel ? `(${order.discountLabel})` : ""}</span>
-                <span>-₹{order.discountTotal.toFixed(0)}</span>
+            {displayOrder.discountTotal > 0 && (
+              <div className="flex justify-between text-emerald-600 font-bold">
+                <span>Discount{displayOrder.discountLabel ? ` (${displayOrder.discountLabel})` : ""}</span>
+                <span>-₹{displayOrder.discountTotal.toFixed(0)}</span>
               </div>
             )}
-            <div className="flex justify-between font-extrabold text-sm pt-2 border-t border-[#6F4E37]/10 text-[#2B2118]">
+            <div className="flex justify-between font-extrabold text-sm pt-2 border-t border-[#6F4E37]/20 text-[#2B2118]">
               <span>Total</span>
-              <span className="text-[#6F4E37] text-base">₹{order.total.toFixed(0)}</span>
+              <span>₹{displayOrder.total.toFixed(0)}</span>
             </div>
           </div>
         </div>
@@ -589,7 +590,8 @@ export default function OrderView() {
                   <Label className="text-[10px] uppercase tracking-wider font-extrabold text-[#6F4E37]/60">Amount Received</Label>
                   <Input
                     type="number"
-                    placeholder="Enter cash amount"
+                    autoFocus
+                    placeholder={`Min ₹${displayOrder.total.toFixed(0)}`}
                     value={cashReceived}
                     onChange={(e) => setCashReceived(e.target.value)}
                     className="bg-[#FAF3E0] text-[#2B2118] border-[#6F4E37]/20 h-9 rounded-xl focus:border-[#6F4E37] focus:bg-white"
@@ -635,8 +637,8 @@ export default function OrderView() {
             {!payDone ? (
               <button
                 onClick={doPay}
-                disabled={!selectedPM || order.total === 0}
-                className="w-full bg-[#6F4E37] hover:bg-[#6F4E37]/90 disabled:bg-[#FAF3E0] disabled:text-zinc-500 disabled:border-[#6F4E37]/10 text-white font-extrabold py-3 rounded-xl text-xs uppercase tracking-wider transition-all duration-200 shadow-md shadow-[#C85D40]/10 cursor-pointer border border-[#6F4E37]/20"
+                disabled={!selectedPM || displayOrder.total === 0}
+                className="w-full bg-[#6F4E37] hover:bg-black disabled:bg-[#FAF3E0] disabled:text-[#6F4E37]/40 disabled:border-[#6F4E37]/30 text-white font-bold py-2.5 rounded-lg text-[13px] uppercase tracking-widest transition-all duration-200 shadow-sm cursor-pointer border border-[#6F4E37]"
               >
                 Confirm Payment
               </button>

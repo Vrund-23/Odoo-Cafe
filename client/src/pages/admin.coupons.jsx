@@ -95,13 +95,13 @@ export default function CouponsPage() {
         name: editing.name,
         code: editing.code || undefined,
         discountType,
-        discountValue: editing.discountValue,
+        discountValue: Number(editing.discountValue),
         isActive: editing.active,
         ...(isPromotion && {
           promotionType: editing.apply === "Product" ? "PRODUCT" : "ORDER",
           productId: editing.productId || null,
-          minQuantity: editing.minQty ?? null,
-          minOrderAmount: editing.minOrderAmount ?? null,
+          minQuantity: editing.minQty ? Number(editing.minQty) : null,
+          minOrderAmount: editing.minOrderAmount ? Number(editing.minOrderAmount) : null,
         }),
       };
 
@@ -136,13 +136,13 @@ export default function CouponsPage() {
         name: c.name,
         code: c.code || undefined,
         discountType,
-        discountValue: c.discountValue,
+        discountValue: Number(c.discountValue),
         isActive: active, // updating active state
         ...(isPromotion && {
           promotionType: c.apply === "Product" ? "PRODUCT" : "ORDER",
           productId: c.productId || null,
-          minQuantity: c.minQty ?? null,
-          minOrderAmount: c.minOrderAmount ?? null,
+          minQuantity: c.minQty ? Number(c.minQty) : null,
+          minOrderAmount: c.minOrderAmount ? Number(c.minOrderAmount) : null,
         }),
       };
 
